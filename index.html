@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>imbbloh · Game Catalog</title>
+<meta name="description" content="Browse available digital games with pricing — Nintendo Switch & PlayStation">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0d0d10;
+  --surface:  #16161c;
+  --surface2: #1e1e26;
+  --border:   #2a2a36;
+  --accent:   #f0c140;
+  --text:     #eeeef2;
+  --muted:    #7a7a90;
+  --green:    #3ecf7e;
+  --blue:     #0070d1;
+  --red:      #e00000;
+  --radius:   14px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+.app {
+  max-width: 1020px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: inherit;
+}
+
+.logo-icon {
+  width: 38px; height: 38px;
+  background: var(--accent); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+
+.logo-text h1 {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 1.1rem; letter-spacing: -0.02em; line-height: 1;
+}
+
+.logo-text p {
+  font-size: 0.68rem; color: var(--muted);
+  margin-top: 2px; font-family: 'DM Mono', monospace;
+}
+
+.live-badge {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; font-size: 0.68rem;
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+}
+
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 6px var(--green);
+  animation: pulse 2.5s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── Search ── */
+.search-wrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.search-icon {
+  position: absolute; left: 14px; top: 50%;
+  transform: translateY(-52%);
+  color: var(--muted); font-size: 1.15rem; pointer-events: none;
+  line-height: 1;
+}
+
+#searchInput {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem;
+  padding: 13px 16px 13px 44px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+#searchInput:focus { border-color: var(--accent); }
+#searchInput::placeholder { color: var(--muted); opacity: 0.5; }
+
+/* ── Controls ── */
+.controls {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px; gap: 10px; flex-wrap: wrap;
+}
+
+.filter-pills { display: flex; gap: 6px; }
+
+.f-pill {
+  padding: 5px 14px; border-radius: 20px;
+  font-size: 0.68rem; font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  cursor: pointer; border: 1px solid var(--border);
+  background: transparent; color: var(--muted);
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.f-pill.f-all  { }
+.f-pill.f-all.active  { background: var(--accent);  color: #0d0d10; border-color: var(--accent); }
+.f-pill.f-ns.active   { background: rgba(224,0,0,0.15); color: #ff4444; border-color: #e00000; }
+.f-pill.f-ps.active   { background: rgba(0,112,209,0.15); color: #3399ff; border-color: var(--blue); }
+
+.sort-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--muted);
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 7px 12px;
+  outline: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Stats bar ── */
+.stats-bar {
+  display: none;
+  align-items: center; gap: 6px;
+  margin-bottom: 18px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.stats-bar strong { color: var(--text); }
+.stats-sep { color: var(--border); padding: 0 4px; }
+
+/* ── Grid ── */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+/* ── Skeleton ── */
+.skel {
+  height: 296px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 0.65; }
+}
+
+/* ── Game Card ── */
+.game-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.game-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* ── Cover ── */
+.cover-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  position: relative;
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+
+.cover-wrap img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.game-card:hover .cover-wrap img { transform: scale(1.04); }
+
+.cover-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.cover-initial {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 3.2rem;
+  color: rgba(255,255,255,0.22);
+  letter-spacing: -0.04em;
+}
+
+/* ── Platform strip ── */
+.plat-strip {
+  position: absolute;
+  top: 8px; left: 8px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.plat-strip.ns { background: rgba(200,0,10,0.82); color: #fff; }
+.plat-strip.ps { background: rgba(0,48,135,0.82); color: #fff; }
+.plat-strip.unk { background: rgba(30,30,38,0.82); color: var(--muted); }
+
+/* ── Card body ── */
+.card-body {
+  padding: 12px 14px 10px;
+  flex: 1;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.card-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+/* ── Prices ── */
+.card-prices { margin-top: auto; }
+
+.price-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.price-label {
+  font-size: 0.63rem;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+}
+
+.price-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.pv-normal  { color: var(--accent); }
+.pv-premium { color: var(--green); }
+.pv-single  { color: var(--green); }
+
+/* ── Card footer ── */
+.card-footer {
+  padding: 9px 14px 11px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: flex-end;
+}
+
+.view-link {
+  font-size: 0.63rem;
+  color: var(--accent);
+  text-decoration: none;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+
+.view-link:hover { opacity: 1; }
+
+/* ── State messages ── */
+.state-msg {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+  grid-column: 1 / -1;
+}
+
+.state-msg .icon { font-size: 2.8rem; margin-bottom: 14px; }
+
+.state-msg h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem; font-weight: 700;
+  color: var(--text); margin-bottom: 8px;
+}
+
+.state-msg p { font-size: 0.82rem; line-height: 1.7; max-width: 400px; margin: 0 auto; }
+
+.state-msg .hint {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: left;
+}
+
+/* ── Responsive ── */
+@media (max-width: 520px) {
+  .game-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .card-title { font-size: 0.78rem; }
+  .cover-initial { font-size: 2.4rem; }
+}
+
+@media (min-width: 700px) {
+  .game-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <a class="logo" href="index.html">
+      <div class="logo-icon">🎮</div>
+      <div class="logo-text">
+        <h1>imbbloh</h1>
+        <p>game catalog</p>
+      </div>
+    </a>
+    <div class="live-badge"><div class="dot"></div>Live</div>
+  </header>
+
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input type="text" id="searchInput" placeholder="Search games…" autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+
+  <div class="controls">
+    <div class="filter-pills" id="filterPills">
+      <button class="f-pill f-all active" data-f="all">All</button>
+      <button class="f-pill f-ns"  data-f="ns">🔴 Nintendo</button>
+      <button class="f-pill f-ps"  data-f="ps">🔵 PlayStation</button>
+    </div>
+    <select class="sort-select" id="sortSelect">
+      <option value="name">A – Z</option>
+      <option value="price-asc">Price ↑</option>
+      <option value="price-desc">Price ↓</option>
+    </select>
+  </div>
+
+  <div class="stats-bar" id="statsBar">
+    <strong id="statTotal">0</strong> games
+    <span class="stats-sep">·</span>
+    From <strong id="statMin">—</strong>
+    <span class="stats-sep">·</span>
+    <span id="statNS" style="color:#ff4444">NS 0</span>
+    <span class="stats-sep">/</span>
+    <span id="statPS" style="color:#3399ff">PS 0</span>
+  </div>
+
+  <div class="game-grid" id="gameGrid">
+    <div class="skel"></div>
+    <div class="skel"></div>
+    <div class="skel"></div>
+    <div class="skel"></div>
+    <div class="skel"></div>
+    <div class="skel"></div>
+  </div>
+
+</div>
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────
+// Your Google Sheet ID (from the URL between /d/ and /edit)
+var SHEET_ID = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
+
+// Optional: specific sheet tab GID (leave empty to use the first sheet)
+var SHEET_GID = '';
+
+// Column keyword detection — matches header cells (case-insensitive substrings)
+var COL_KEYS = {
+  title:   ['game title', 'title', 'game name', 'game', 'name'],
+  normal:  ['normal price', 'normal', 'standard price', 'standard'],
+  premium: ['premium price', 'premium'],
+  price:   ['price', 'cost'],
+  platform:['platform'],
+  url:     ['store url', 'official store', 'url', 'link', 'store'],
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+var allGames  = [];
+var curFilter = 'all';
+var curSearch = '';
+var curSort   = 'name';
+
+// ── Fetch Google Sheet ──────────────────────────────────────────────────────
+function loadSheet() {
+  var gidParam = SHEET_GID ? ('&gid=' + SHEET_GID) : '';
+  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json' + gidParam;
+
+  return fetch(url)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      // Strip JSONP wrapper: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
+      var match = text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/);
+      if (!match) throw new Error('Unexpected response from Google Sheets.');
+
+      var data = JSON.parse(match[1]);
+      if (data.status === 'error') {
+        var msg = (data.errors && data.errors[0] && data.errors[0].detailed_message) || 'Sheet access denied.';
+        throw new Error(msg);
+      }
+
+      var table  = data.table;
+      var headers = table.cols.map(function(c) { return (c.label || '').toLowerCase().trim(); });
+
+      // Map each key to its column index
+      var idx = {};
+      Object.keys(COL_KEYS).forEach(function(key) {
+        var keywords = COL_KEYS[key];
+        idx[key] = headers.findIndex(function(h) {
+          return keywords.some(function(k) { return h.indexOf(k) !== -1; });
+        });
+      });
+
+      // Parse rows into game objects
+      return table.rows
+        .filter(function(row) {
+          return row.c && idx.title >= 0 && row.c[idx.title] && row.c[idx.title].v;
+        })
+        .map(function(row) {
+          function get(i) {
+            if (i < 0 || !row.c || !row.c[i]) return '';
+            var cell = row.c[i];
+            return cell.v !== null && cell.v !== undefined ? String(cell.v) : '';
+          }
+          function toPrice(v) {
+            var n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+            return isNaN(n) ? null : n;
+          }
+
+          return {
+            title:        String(get(idx.title)).trim(),
+            normalPrice:  toPrice(get(idx.normal)),
+            premiumPrice: toPrice(get(idx.premium)),
+            codePrice:    toPrice(get(idx.price)),
+            platform:     String(get(idx.platform)).trim(),
+            storeUrl:     String(get(idx.url)).trim(),
+          };
+        })
+        .filter(function(g) { return g.title.length > 0; });
+    });
+}
+
+// ── Platform helpers ────────────────────────────────────────────────────────
+function isNS(platform) {
+  var p = (platform || '').toLowerCase();
+  return p.indexOf('switch') !== -1 || p.indexOf('nintendo') !== -1;
+}
+
+function isPS(platform) {
+  var p = (platform || '').toLowerCase();
+  return p.indexOf('ps') !== -1 || p.indexOf('play') !== -1;
+}
+
+// ── Nintendo CDN cover image ────────────────────────────────────────────────
+// Extracts the product slug from the Nintendo store URL and builds the CDN URL.
+// Falls back to null if the URL doesn't match (caller shows a placeholder).
+function getCoverUrl(game) {
+  var url = game.storeUrl || '';
+  if (!url || url.toLowerCase().indexOf('nintendo.com') === -1) return null;
+
+  var m = url.match(/products\/([a-z0-9][a-z0-9-]{1,80})\/?/i);
+  if (!m) return null;
+
+  var slug    = m[1].toLowerCase();
+  var variant = slug.endsWith('-switch-2') ? 'switch-2' : 'switch';
+
+  // Nintendo's Cloudinary CDN — 16:9 hero image
+  return 'https://assets.nintendo.com/image/upload/'
+       + 'ar_16:9,b_auto:border,c_lpad/b_white/f_auto/q_auto/dpr_2.0/c_scale,w_460'
+       + '/ncom/software/' + variant + '/' + slug + '/hero';
+}
+
+// ── Render a single card ────────────────────────────────────────────────────
+function renderCard(game) {
+  var coverUrl = getCoverUrl(game);
+  var rawUrl   = game.storeUrl || '';
+  var fullUrl  = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl) : '';
+
+  var ns = isNS(game.platform);
+  var ps = !ns && isPS(game.platform);
+
+  var platClass = ns ? 'ns' : (ps ? 'ps' : 'unk');
+  var platLabel = game.platform || (ns ? 'Nintendo' : ps ? 'PlayStation' : '');
+
+  var gradient  = ns ? 'linear-gradient(135deg,#1a0005,#6e0010)'
+                : ps ? 'linear-gradient(135deg,#000b35,#003b8f)'
+                :      'linear-gradient(135deg,#1a1a2e,#16213e)';
+
+  var initial = game.title.charAt(0).toUpperCase();
+
+  // ── card ──
+  var card = document.createElement('div');
+  card.className = 'game-card';
+  if (fullUrl) card.addEventListener('click', function() { window.open(fullUrl, '_blank', 'noopener'); });
+
+  // ── cover wrap ──
+  var coverWrap = document.createElement('div');
+  coverWrap.className = 'cover-wrap';
+
+  if (coverUrl) {
+    var img = document.createElement('img');
+    img.alt = game.title;
+    img.loading = 'lazy';
+    img.addEventListener('error', function() {
+      // Replace failed image with gradient placeholder
+      var ph = makePlaceholder(gradient, initial);
+      if (img.parentNode) img.parentNode.replaceChild(ph, img);
+    });
+    img.src = coverUrl;
+    coverWrap.appendChild(img);
+  } else {
+    coverWrap.appendChild(makePlaceholder(gradient, initial));
+  }
+
+  // platform badge
+  if (platLabel) {
+    var strip = document.createElement('div');
+    strip.className = 'plat-strip ' + platClass;
+    strip.textContent = platLabel;
+    coverWrap.appendChild(strip);
+  }
+
+  card.appendChild(coverWrap);
+
+  // ── card body ──
+  var body = document.createElement('div');
+  body.className = 'card-body';
+
+  var titleEl = document.createElement('div');
+  titleEl.className = 'card-title';
+  titleEl.textContent = game.title;
+  body.appendChild(titleEl);
+
+  var pricesEl = document.createElement('div');
+  pricesEl.className = 'card-prices';
+
+  if (game.normalPrice !== null && game.premiumPrice !== null) {
+    pricesEl.appendChild(priceRow('🟡 Normal',  '$' + game.normalPrice.toFixed(2),  'pv-normal'));
+    pricesEl.appendChild(priceRow('🟢 Premium', '$' + game.premiumPrice.toFixed(2), 'pv-premium'));
+  } else if (game.codePrice !== null) {
+    pricesEl.appendChild(priceRow('💰 Price', '$' + game.codePrice.toFixed(2), 'pv-single'));
+  } else if (game.normalPrice !== null) {
+    pricesEl.appendChild(priceRow('From', '$' + game.normalPrice.toFixed(2), 'pv-normal'));
+  } else if (game.premiumPrice !== null) {
+    pricesEl.appendChild(priceRow('Premium', '$' + game.premiumPrice.toFixed(2), 'pv-premium'));
+  }
+
+  body.appendChild(pricesEl);
+  card.appendChild(body);
+
+  // ── card footer ──
+  if (fullUrl) {
+    var footer = document.createElement('div');
+    footer.className = 'card-footer';
+
+    var link = document.createElement('a');
+    link.href    = fullUrl;
+    link.target  = '_blank';
+    link.rel     = 'noopener';
+    link.className = 'view-link';
+    link.textContent = 'View Store ↗';
+    link.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    footer.appendChild(link);
+    card.appendChild(footer);
+  }
+
+  return card;
+}
+
+function makePlaceholder(gradient, letter) {
+  var ph = document.createElement('div');
+  ph.className = 'cover-placeholder';
+  ph.style.background = gradient;
+  var span = document.createElement('span');
+  span.className = 'cover-initial';
+  span.textContent = letter;
+  ph.appendChild(span);
+  return ph;
+}
+
+function priceRow(label, value, valClass) {
+  var row   = document.createElement('div');
+  row.className = 'price-row';
+  var lbl   = document.createElement('span');
+  lbl.className = 'price-label';
+  lbl.textContent = label;
+  var val   = document.createElement('span');
+  val.className = 'price-val ' + valClass;
+  val.textContent = value;
+  row.appendChild(lbl);
+  row.appendChild(val);
+  return row;
+}
+
+// ── Filter & sort ───────────────────────────────────────────────────────────
+function getFiltered() {
+  var list = allGames;
+
+  if (curFilter === 'ns') list = list.filter(function(g) { return isNS(g.platform); });
+  if (curFilter === 'ps') list = list.filter(function(g) { return isPS(g.platform); });
+
+  if (curSearch) {
+    var q = curSearch.toLowerCase();
+    list = list.filter(function(g) { return g.title.toLowerCase().indexOf(q) !== -1; });
+  }
+
+  return list.slice().sort(function(a, b) {
+    if (curSort === 'name') return a.title.localeCompare(b.title);
+    var aP = a.normalPrice !== null ? a.normalPrice : (a.codePrice !== null ? a.codePrice : Infinity);
+    var bP = b.normalPrice !== null ? b.normalPrice : (b.codePrice !== null ? b.codePrice : Infinity);
+    return curSort === 'price-asc' ? aP - bP : bP - aP;
+  });
+}
+
+// ── Render full grid ────────────────────────────────────────────────────────
+function render() {
+  var grid = document.getElementById('gameGrid');
+  var list = getFiltered();
+
+  grid.innerHTML = '';
+
+  if (list.length === 0) {
+    var msg = document.createElement('div');
+    msg.className = 'state-msg';
+    msg.innerHTML = '<div class="icon">🔍</div>'
+      + '<h3>No games found</h3>'
+      + '<p>Try adjusting your search or filter.</p>';
+    grid.appendChild(msg);
+    document.getElementById('statsBar').style.display = 'none';
+    return;
+  }
+
+  var frag = document.createDocumentFragment();
+  list.forEach(function(g) { frag.appendChild(renderCard(g)); });
+  grid.appendChild(frag);
+
+  // Stats
+  var nsCount = list.filter(function(g) { return isNS(g.platform); }).length;
+  var psCount = list.filter(function(g) { return isPS(g.platform); }).length;
+  var prices  = list.map(function(g) { return g.normalPrice !== null ? g.normalPrice : g.codePrice; }).filter(function(p) { return p !== null; });
+  var minP    = prices.length ? Math.min.apply(null, prices) : null;
+
+  document.getElementById('statTotal').textContent = list.length;
+  document.getElementById('statMin').textContent   = minP !== null ? '$' + minP.toFixed(2) : '—';
+  document.getElementById('statNS').textContent    = 'NS ' + nsCount;
+  document.getElementById('statPS').textContent    = 'PS ' + psCount;
+  document.getElementById('statsBar').style.display = 'flex';
+}
+
+// ── Show error ──────────────────────────────────────────────────────────────
+function showError(msg) {
+  var grid = document.getElementById('gameGrid');
+  grid.innerHTML = '';
+  var el = document.createElement('div');
+  el.className = 'state-msg';
+  el.innerHTML = '<div class="icon">⚠️</div>'
+    + '<h3>Could not load catalog</h3>'
+    + '<p>' + msg + '</p>'
+    + '<div class="hint">'
+    + 'Fix: Open the Google Sheet → Share → change to<br>'
+    + '<strong>"Anyone with the link" → Viewer</strong>'
+    + '</div>';
+  grid.appendChild(el);
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+loadSheet()
+  .then(function(games) {
+    allGames = games;
+    render();
+  })
+  .catch(function(err) {
+    showError(err.message || 'Unknown error. Check the browser console.');
+  });
+
+// ── Events ──────────────────────────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  curSearch = e.target.value.trim();
+  render();
+});
+
+document.getElementById('sortSelect').addEventListener('change', function(e) {
+  curSort = e.target.value;
+  render();
+});
+
+document.getElementById('filterPills').addEventListener('click', function(e) {
+  var pill = e.target.closest('.f-pill');
+  if (!pill) return;
+  curFilter = pill.dataset.f;
+  document.querySelectorAll('.f-pill').forEach(function(p) { p.classList.remove('active'); });
+  pill.classList.add('active');
+  render();
+});
+</script>
+</body>
+</html>
