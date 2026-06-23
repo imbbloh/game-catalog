@@ -359,10 +359,11 @@ var COL_KEYS = {
   price:   ['price', 'cost', 'amount'],
   platform:['platform'],
   url:     ['store url', 'official store', 'url', 'link', 'store'],
+  cover:   ['cover url', 'cover image', 'cover', 'image url', 'image', 'thumbnail'],
 };
 
 // ── Image cache (localStorage) ──────────────────────────────────────────────
-var IMG_LS  = 'ibl_img_v3';
+var IMG_LS  = 'ibl_img_v4'; // bumped: ns:: keys added, old Microlink failures cleared
 var imgCache = {};
 try { imgCache = JSON.parse(localStorage.getItem(IMG_LS) || '{}'); } catch(e) {}
 
@@ -386,17 +387,55 @@ function setCachedGames(games) {
   try { localStorage.setItem(DATA_LS, JSON.stringify({ ts: Date.now(), games: games })); } catch(e) {}
 }
 
-// ── Microlink concurrent pool (3 simultaneous, no artificial delay) ──────────
+// ── Nintendo eShop EU search — direct CDN images, open CORS ─────────────────
+var NS_CONCURRENCY = 5;
+var nsQueue  = [];
+var nsActive = 0;
+
+function fetchNintendoCover(title, onDone) {
+  var key = 'ns::' + title;
+  if (imgCache[key] !== undefined) { onDone(imgCache[key] || null); return; }
+  nsQueue.push({ title: title, key: key, cb: onDone });
+  drainNSQueue();
+}
+
+function drainNSQueue() {
+  while (nsQueue.length && nsActive < NS_CONCURRENCY) {
+    nsActive++;
+    (function(item) {
+      var api = 'https://searching.nintendo-europe.com/en/select?rows=1&wt=json&fl=image_url'
+              + '&fq=type%3AGAME%20AND%20system_names_txt%3A%22Nintendo%20Switch%22'
+              + '&q=' + encodeURIComponent(item.title);
+      fetch(api)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var docs = d && d.response && d.response.docs;
+          var src  = (docs && docs[0] && docs[0].image_url) ? docs[0].image_url : '';
+          imgCache[item.key] = src;
+          saveImgCache();
+          item.cb(src || null);
+        })
+        .catch(function() {
+          imgCache[item.key] = '';
+          item.cb(null);
+        })
+        .then(function() {
+          nsActive--;
+          drainNSQueue();
+        });
+    })(nsQueue.shift());
+  }
+}
+
+// ── Microlink concurrent pool — fallback for PS / Codes ──────────────────────
 var ML_CONCURRENCY = 3;
 var mlQueue  = [];
 var mlActive = 0;
 
-function queueImage(storeUrl, onDone) {
+function fetchMicrolink(storeUrl, onDone) {
   if (!storeUrl) { onDone(null); return; }
   var full = storeUrl.startsWith('http') ? storeUrl : 'https://' + storeUrl;
-
   if (imgCache[full] !== undefined) { onDone(imgCache[full] || null); return; }
-
   mlQueue.push({ url: full, cb: onDone });
   drainMLQueue();
 }
@@ -429,15 +468,29 @@ function drainMLQueue() {
 var coverIO = new IntersectionObserver(function(entries) {
   entries.forEach(function(entry) {
     if (!entry.isIntersecting) return;
-    var wrap = entry.target;
+    var wrap  = entry.target;
     coverIO.unobserve(wrap);
-    var storeUrl = wrap.dataset.url;
-    if (!storeUrl) return;
+    var cover = wrap.dataset.cover; // direct URL from sheet column
+    var type  = wrap.dataset.type;
+    var title = wrap.dataset.title;
+    var url   = wrap.dataset.url;
 
-    queueImage(storeUrl, function(imgUrl) {
-      if (!imgUrl) return;
-      applyImage(wrap, imgUrl);
-    });
+    if (cover) {
+      applyImage(wrap, cover);
+      return;
+    }
+
+    if (type === 'ns' || type === 'code') {
+      // Nintendo API for Switch games and digital codes
+      fetchNintendoCover(title, function(src) {
+        if (src) { applyImage(wrap, src); return; }
+        // Fall back to Microlink if Nintendo API returned nothing
+        if (url) fetchMicrolink(url, function(s) { if (s) applyImage(wrap, s); });
+      });
+    } else {
+      // PS Store — use Microlink
+      if (url) fetchMicrolink(url, function(src) { if (src) applyImage(wrap, src); });
+    }
   });
 }, { rootMargin: '600px 0px' });
 
@@ -505,6 +558,7 @@ function loadSheet(tabName) {
             codePrice:    toPrice(get(row, idx.price)),
             platform:     String(get(row, idx.platform)).trim(),
             storeUrl:     String(get(row, idx.url)).trim(),
+            coverUrl:     String(get(row, idx.cover)).trim(),
           };
         })
         .filter(function(g) { return g.title.length > 0; });
@@ -599,11 +653,12 @@ function makeCard(game) {
     coverWrap.appendChild(strip);
   }
 
-  // Queue image load when this wrap scrolls into view
-  if (fullUrl) {
-    coverWrap.dataset.url = fullUrl;
-    coverIO.observe(coverWrap);
-  }
+  // Tag the wrap so the IntersectionObserver knows how to fetch the image
+  coverWrap.dataset.type  = pc;
+  coverWrap.dataset.title = game.title;
+  if (game.coverUrl) coverWrap.dataset.cover = game.coverUrl;
+  if (fullUrl)       coverWrap.dataset.url   = fullUrl;
+  coverIO.observe(coverWrap);
 
   card.appendChild(coverWrap);
 
