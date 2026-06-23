@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>imbbloh · Game Catalog</title>
+<meta name="description" content="Browse available digital games with pricing — Nintendo Switch & PlayStation">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0d0d10;
+  --surface:  #16161c;
+  --surface2: #1e1e26;
+  --border:   #2a2a36;
+  --accent:   #f0c140;
+  --text:     #eeeef2;
+  --muted:    #7a7a90;
+  --green:    #3ecf7e;
+  --blue:     #0070d1;
+  --red:      #e00000;
+  --radius:   14px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+.app { max-width: 1020px; margin: 0 auto; padding: 20px 14px; }
+
+/* ── Header ── */
+header {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 20px;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: inherit;
+}
+
+.logo-icon {
+  width: 38px; height: 38px; background: var(--accent);
+  border-radius: 10px; display: flex; align-items: center;
+  justify-content: center; font-size: 18px; flex-shrink: 0;
+}
+
+.logo-text h1 {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 1.1rem; letter-spacing: -0.02em; line-height: 1;
+}
+
+.logo-text p {
+  font-size: 0.67rem; color: var(--muted);
+  margin-top: 2px; font-family: 'DM Mono', monospace;
+}
+
+.live-badge {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; font-size: 0.67rem;
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+}
+
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 6px var(--green);
+  animation: pulse 2.5s ease infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── Search ── */
+.search-wrap { position: relative; margin-bottom: 10px; }
+
+.search-icon {
+  position: absolute; left: 14px; top: 50%;
+  transform: translateY(-54%);
+  color: var(--muted); font-size: 1.1rem; pointer-events: none;
+}
+
+#searchInput {
+  width: 100%; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 12px;
+  color: var(--text); font-family: 'DM Sans', sans-serif;
+  font-size: 0.95rem; padding: 12px 16px 12px 42px;
+  outline: none; -webkit-appearance: none;
+}
+
+#searchInput:focus { border-color: var(--accent); }
+#searchInput::placeholder { color: var(--muted); opacity: .5; }
+
+/* ── Controls ── */
+.controls {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px; gap: 8px; flex-wrap: wrap;
+}
+
+.filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.f-pill {
+  padding: 5px 13px; border-radius: 20px;
+  font-size: 0.67rem; font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  letter-spacing: .07em; text-transform: uppercase;
+  cursor: pointer; border: 1px solid var(--border);
+  background: transparent; color: var(--muted);
+  -webkit-tap-highlight-color: transparent;
+  transition: all .15s;
+}
+
+.f-pill.fa  { }
+.f-pill.fa.on  { background: var(--accent);               color: #0d0d10;  border-color: var(--accent); }
+.f-pill.fns.on { background: rgba(224,0,0,.15);           color: #ff5555;  border-color: #e00000; }
+.f-pill.fps.on { background: rgba(0,112,209,.15);         color: #44aaff;  border-color: var(--blue); }
+.f-pill.fco.on { background: rgba(62,207,126,.15);        color: var(--green); border-color: var(--green); }
+
+.sort-select {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 9px; color: var(--muted);
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 0.67rem; letter-spacing: .06em; text-transform: uppercase;
+  padding: 7px 10px; outline: none; cursor: pointer; flex-shrink: 0;
+}
+
+/* ── Stats bar ── */
+.stats-bar {
+  display: none; align-items: center; gap: 6px;
+  margin-bottom: 16px; padding: 9px 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; font-size: 0.7rem;
+  font-family: 'DM Mono', monospace; color: var(--muted); flex-wrap: wrap;
+}
+
+.stats-bar strong { color: var(--text); }
+.ss { color: var(--border); padding: 0 3px; }
+
+/* ── Grid ── */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+/* ── Skeleton ── */
+.skel {
+  height: 280px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes shimmer { 0%,100%{opacity:.35} 50%{opacity:.6} }
+
+/* ── Card ── */
+.game-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  display: flex; flex-direction: column;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color .18s, transform .18s, box-shadow .18s;
+}
+
+.game-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+}
+
+/* ── Cover ── */
+.cover-wrap {
+  width: 100%; aspect-ratio: 16/9;
+  position: relative; overflow: hidden;
+  background: var(--surface2); flex-shrink: 0;
+}
+
+.cover-wrap img.c-img {
+  width: 100%; height: 100%; object-fit: cover;
+  display: block; position: absolute; inset: 0;
+  opacity: 0; transition: opacity .35s ease;
+}
+
+.cover-wrap img.c-img.loaded { opacity: 1; }
+
+.cover-ph {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  position: absolute; inset: 0;
+  transition: opacity .35s ease;
+}
+
+.cover-ph.hidden { opacity: 0; pointer-events: none; }
+
+.c-initial {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 3rem; color: rgba(255,255,255,.2);
+  letter-spacing: -.04em;
+}
+
+/* ── Platform badge ── */
+.plat-strip {
+  position: absolute; top: 7px; left: 7px;
+  padding: 2px 7px; border-radius: 4px;
+  font-size: 0.57rem; font-weight: 700;
+  font-family: 'Syne', sans-serif; letter-spacing: .07em;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  z-index: 1;
+}
+
+.plat-strip.ns   { background: rgba(200,0,10,.82); color: #fff; }
+.plat-strip.ps   { background: rgba(0,48,135,.82); color: #fff; }
+.plat-strip.code { background: rgba(62,207,126,.82); color: #0d0d10; }
+.plat-strip.unk  { background: rgba(30,30,38,.82); color: var(--muted); }
+
+/* ── Card body ── */
+.card-body {
+  padding: 11px 12px 9px;
+  flex: 1; display: flex; flex-direction: column; gap: 8px;
+}
+
+.card-title {
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 0.84rem; line-height: 1.35; color: var(--text);
+}
+
+.card-prices { margin-top: auto; }
+
+.p-row {
+  display: flex; align-items: center;
+  justify-content: space-between; padding: 2px 0;
+}
+
+.p-lbl { font-size: .62rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+.p-val { font-family: 'DM Mono', monospace; font-size: .78rem; font-weight: 500; }
+.pv-n  { color: var(--accent); }
+.pv-p  { color: var(--green); }
+.pv-s  { color: var(--green); }
+
+/* ── Card footer ── */
+.card-footer {
+  padding: 8px 12px 10px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: flex-end;
+}
+
+.view-link {
+  font-size: .62rem; color: var(--accent);
+  text-decoration: none; font-family: 'Syne', sans-serif;
+  font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  opacity: .8; transition: opacity .15s;
+}
+
+.view-link:hover { opacity: 1; }
+
+/* ── State messages ── */
+.state-msg {
+  text-align: center; padding: 60px 20px;
+  color: var(--muted); grid-column: 1/-1;
+}
+
+.state-msg .icon { font-size: 2.6rem; margin-bottom: 12px; }
+.state-msg h3 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.state-msg p { font-size: .82rem; line-height: 1.7; max-width: 380px; margin: 0 auto; }
+.state-msg .hint {
+  display: inline-block; margin-top: 12px;
+  padding: 8px 14px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 8px;
+  font-family: 'DM Mono', monospace; font-size: .72rem;
+  color: var(--muted); text-align: left;
+}
+
+/* ── Responsive ── */
+@media (max-width: 460px) {
+  .game-grid { grid-template-columns: repeat(2, 1fr); gap: 9px; }
+  .card-title { font-size: .77rem; }
+  .c-initial { font-size: 2.4rem; }
+  .filter-pills { gap: 4px; }
+  .f-pill { padding: 4px 10px; font-size: .62rem; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <a class="logo" href="index.html">
+      <div class="logo-icon">🎮</div>
+      <div class="logo-text">
+        <h1>imbbloh</h1>
+        <p>game catalog</p>
+      </div>
+    </a>
+    <div class="live-badge"><div class="dot"></div>Live</div>
+  </header>
+
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input type="text" id="searchInput" placeholder="Search games…" autocomplete="off" autocorrect="off" spellcheck="false">
+  </div>
+
+  <div class="controls">
+    <div class="filter-pills" id="filterPills">
+      <button class="f-pill fa on"  data-f="all">All</button>
+      <button class="f-pill fns"    data-f="ns">🔴 Nintendo</button>
+      <button class="f-pill fps"    data-f="ps">🔵 PlayStation</button>
+      <button class="f-pill fco"    data-f="code">🔑 Codes</button>
+    </div>
+    <select class="sort-select" id="sortSelect">
+      <option value="name">A – Z</option>
+      <option value="price-asc">Price ↑</option>
+      <option value="price-desc">Price ↓</option>
+    </select>
+  </div>
+
+  <div class="stats-bar" id="statsBar">
+    <strong id="statTotal">0</strong> games
+    <span class="ss">·</span>
+    From <strong id="statMin">—</strong>
+    <span class="ss">·</span>
+    <span id="statNS"   style="color:#ff5555">NS 0</span>
+    <span class="ss">/</span>
+    <span id="statPS"   style="color:#44aaff">PS 0</span>
+    <span class="ss">/</span>
+    <span id="statCode" style="color:var(--green)">Code 0</span>
+  </div>
+
+  <div class="game-grid" id="gameGrid">
+    <div class="skel"></div><div class="skel"></div>
+    <div class="skel"></div><div class="skel"></div>
+    <div class="skel"></div><div class="skel"></div>
+  </div>
+
+</div>
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────
+var SHEET_ID = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
+
+// Each entry maps a sheet tab to a listing type
+var SHEETS = [
+  { tab: 'Nintendo Switch Games',  type: 'ns' },
+  { tab: 'Playstation Games',      type: 'ps' },
+  { tab: 'Digital Codes - Switch', type: 'code' },
+];
+
+// Column keyword detection (case-insensitive substring match, first hit wins)
+var COL_KEYS = {
+  title:   ['game title', 'title', 'game name', 'game', 'name'],
+  normal:  ['normal price', 'normal version', 'normal', 'standard price', 'standard'],
+  premium: ['premium price', 'premium version', 'premium'],
+  price:   ['price', 'cost', 'amount'],
+  platform:['platform'],
+  url:     ['store url', 'official store', 'url', 'link', 'store'],
+};
+
+// ── Image cache (localStorage) ──────────────────────────────────────────────
+var IMG_LS  = 'ibl_img_v3';
+var imgCache = {};
+try { imgCache = JSON.parse(localStorage.getItem(IMG_LS) || '{}'); } catch(e) {}
+
+function saveImgCache() {
+  try { localStorage.setItem(IMG_LS, JSON.stringify(imgCache)); } catch(e) {}
+}
+
+// ── Microlink queue (rate-limited to avoid free-tier overuse) ───────────────
+var mlQueue   = [];
+var mlRunning = false;
+
+function queueImage(storeUrl, onDone) {
+  if (!storeUrl) { onDone(null); return; }
+  var full = storeUrl.startsWith('http') ? storeUrl : 'https://' + storeUrl;
+
+  // Instant cache hit
+  if (imgCache[full] !== undefined) { onDone(imgCache[full] || null); return; }
+
+  mlQueue.push({ url: full, cb: onDone });
+  if (!mlRunning) drainMLQueue();
+}
+
+function drainMLQueue() {
+  if (!mlQueue.length) { mlRunning = false; return; }
+  mlRunning = true;
+  var item = mlQueue.shift();
+
+  fetch('https://api.microlink.io/?url=' + encodeURIComponent(item.url))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var src = (d && d.data && d.data.image && d.data.image.url) ? d.data.image.url : '';
+      imgCache[item.url] = src;
+      saveImgCache();
+      item.cb(src || null);
+    })
+    .catch(function() {
+      imgCache[item.url] = '';
+      item.cb(null);
+    })
+    .then(function() {
+      setTimeout(drainMLQueue, 350); // ~3 req/sec max — stays within free tier
+    });
+}
+
+// ── IntersectionObserver — trigger image load only when card is visible ──────
+var coverIO = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (!entry.isIntersecting) return;
+    var wrap = entry.target;
+    coverIO.unobserve(wrap);
+    var storeUrl = wrap.dataset.url;
+    if (!storeUrl) return;
+
+    queueImage(storeUrl, function(imgUrl) {
+      if (!imgUrl) return;
+      applyImage(wrap, imgUrl);
+    });
+  });
+}, { rootMargin: '150px 0px' });
+
+function applyImage(coverWrap, src) {
+  var img = coverWrap.querySelector('.c-img');
+  var ph  = coverWrap.querySelector('.cover-ph');
+  if (!img || !ph) return;
+
+  img.onload = function() {
+    img.classList.add('loaded');
+    ph.classList.add('hidden');
+  };
+  img.onerror = function() { /* keep placeholder */ };
+  img.src = src;
+}
+
+// ── Parse a Google Sheet tab ────────────────────────────────────────────────
+function loadSheet(tabName) {
+  var param = tabName ? ('&sheet=' + encodeURIComponent(tabName)) : '';
+  var url   = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json' + param;
+
+  return fetch(url)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      var m = text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/);
+      if (!m) throw new Error('Bad response from sheet: ' + tabName);
+      var data = JSON.parse(m[1]);
+      if (data.status === 'error') {
+        var msg = data.errors && data.errors[0] ? data.errors[0].detailed_message : 'Sheet error';
+        throw new Error(msg + ' (' + (tabName || 'default') + ')');
+      }
+      return data.table;
+    })
+    .then(function(table) {
+      var headers = table.cols.map(function(c) { return (c.label || '').toLowerCase().trim(); });
+
+      // Map each semantic key to a column index
+      var idx = {};
+      Object.keys(COL_KEYS).forEach(function(key) {
+        idx[key] = headers.findIndex(function(h) {
+          return COL_KEYS[key].some(function(k) { return h.indexOf(k) !== -1; });
+        });
+      });
+
+      function get(row, i) {
+        if (i < 0 || !row.c || !row.c[i]) return '';
+        var v = row.c[i].v;
+        return (v !== null && v !== undefined) ? String(v) : '';
+      }
+
+      function toPrice(v) {
+        var n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+        return isNaN(n) ? null : n;
+      }
+
+      return table.rows
+        .filter(function(row) {
+          return row.c && idx.title >= 0 && row.c[idx.title] && row.c[idx.title].v;
+        })
+        .map(function(row) {
+          return {
+            title:        String(get(row, idx.title)).trim(),
+            normalPrice:  toPrice(get(row, idx.normal)),
+            premiumPrice: toPrice(get(row, idx.premium)),
+            codePrice:    toPrice(get(row, idx.price)),
+            platform:     String(get(row, idx.platform)).trim(),
+            storeUrl:     String(get(row, idx.url)).trim(),
+          };
+        })
+        .filter(function(g) { return g.title.length > 0; });
+    });
+}
+
+// ── Load all three sheets in parallel ──────────────────────────────────────
+function loadAll() {
+  return Promise.allSettled(
+    SHEETS.map(function(s) {
+      return loadSheet(s.tab).then(function(games) {
+        return games.map(function(g) {
+          return Object.assign({}, g, { type: s.type });
+        });
+      });
+    })
+  ).then(function(results) {
+    var all = [];
+    var errs = [];
+    results.forEach(function(r, i) {
+      if (r.status === 'fulfilled') {
+        all = all.concat(r.value);
+      } else {
+        errs.push((SHEETS[i].tab || 'default') + ': ' + r.reason.message);
+      }
+    });
+    if (errs.length) console.warn('Sheet errors:', errs.join(' | '));
+    return all;
+  });
+}
+
+// ── Platform helpers ────────────────────────────────────────────────────────
+function platClass(g) {
+  if (g.type === 'code') return 'code';
+  if (g.type === 'ps')   return 'ps';
+  if (g.type === 'ns')   return 'ns';
+  var p = (g.platform || '').toLowerCase();
+  if (p.indexOf('switch') !== -1 || p.indexOf('nintendo') !== -1) return 'ns';
+  if (p.indexOf('ps')     !== -1 || p.indexOf('play')     !== -1) return 'ps';
+  return 'unk';
+}
+
+// ── Render one card ─────────────────────────────────────────────────────────
+function makeCard(game) {
+  var pc       = platClass(game);
+  var platLbl  = game.platform || (pc === 'ns' ? 'Nintendo' : pc === 'ps' ? 'PlayStation' : pc === 'code' ? 'Code' : '');
+  var rawUrl   = game.storeUrl || '';
+  var fullUrl  = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl) : '';
+
+  var gradients = {
+    ns:   'linear-gradient(135deg,#1a0005,#6e0010)',
+    ps:   'linear-gradient(135deg,#000b35,#003b8f)',
+    code: 'linear-gradient(135deg,#001f12,#004d2e)',
+    unk:  'linear-gradient(135deg,#16161c,#1e1e26)',
+  };
+  var grad  = gradients[pc] || gradients.unk;
+  var init  = game.title.charAt(0).toUpperCase();
+
+  // ── card element ──
+  var card = document.createElement('div');
+  card.className = 'game-card';
+  if (fullUrl) {
+    card.addEventListener('click', function() { window.open(fullUrl, '_blank', 'noopener'); });
+  }
+
+  // ── cover ──
+  var coverWrap = document.createElement('div');
+  coverWrap.className = 'cover-wrap';
+
+  // Placeholder (always shown until image is ready)
+  var ph = document.createElement('div');
+  ph.className = 'cover-ph';
+  ph.style.background = grad;
+  var span = document.createElement('span');
+  span.className = 'c-initial';
+  span.textContent = init;
+  ph.appendChild(span);
+  coverWrap.appendChild(ph);
+
+  // Hidden img element that gets populated later
+  var img = document.createElement('img');
+  img.className = 'c-img';
+  img.alt = game.title;
+  img.loading = 'lazy';
+  coverWrap.appendChild(img);
+
+  // Platform badge
+  if (platLbl) {
+    var strip = document.createElement('div');
+    strip.className = 'plat-strip ' + pc;
+    strip.textContent = platLbl;
+    coverWrap.appendChild(strip);
+  }
+
+  // Queue image load when this wrap scrolls into view
+  if (fullUrl) {
+    coverWrap.dataset.url = fullUrl;
+    coverIO.observe(coverWrap);
+  }
+
+  card.appendChild(coverWrap);
+
+  // ── body ──
+  var body = document.createElement('div');
+  body.className = 'card-body';
+
+  var titleEl = document.createElement('div');
+  titleEl.className = 'card-title';
+  titleEl.textContent = game.title;
+  body.appendChild(titleEl);
+
+  var pricesEl = document.createElement('div');
+  pricesEl.className = 'card-prices';
+
+  if (game.normalPrice !== null && game.premiumPrice !== null) {
+    pricesEl.appendChild(pRow('🟡 Normal',  '$' + game.normalPrice.toFixed(2),  'pv-n'));
+    pricesEl.appendChild(pRow('🟢 Premium', '$' + game.premiumPrice.toFixed(2), 'pv-p'));
+  } else if (game.codePrice !== null) {
+    pricesEl.appendChild(pRow('💰 Price', '$' + game.codePrice.toFixed(2), 'pv-s'));
+  } else if (game.normalPrice !== null) {
+    pricesEl.appendChild(pRow('From', '$' + game.normalPrice.toFixed(2), 'pv-n'));
+  } else if (game.premiumPrice !== null) {
+    pricesEl.appendChild(pRow('Premium', '$' + game.premiumPrice.toFixed(2), 'pv-p'));
+  }
+
+  body.appendChild(pricesEl);
+  card.appendChild(body);
+
+  // ── footer ──
+  if (fullUrl) {
+    var footer = document.createElement('div');
+    footer.className = 'card-footer';
+    var a = document.createElement('a');
+    a.href = fullUrl; a.target = '_blank'; a.rel = 'noopener';
+    a.className = 'view-link'; a.textContent = 'View Store ↗';
+    a.addEventListener('click', function(e) { e.stopPropagation(); });
+    footer.appendChild(a);
+    card.appendChild(footer);
+  }
+
+  return card;
+}
+
+function pRow(label, value, cls) {
+  var row = document.createElement('div'); row.className = 'p-row';
+  var l = document.createElement('span'); l.className = 'p-lbl'; l.textContent = label;
+  var v = document.createElement('span'); v.className = 'p-val ' + cls; v.textContent = value;
+  row.appendChild(l); row.appendChild(v);
+  return row;
+}
+
+// ── State ───────────────────────────────────────────────────────────────────
+var allGames  = [];
+var curFilter = 'all';
+var curSearch = '';
+var curSort   = 'name';
+
+function getFiltered() {
+  var list = allGames;
+
+  if (curFilter === 'ns')   list = list.filter(function(g) { return g.type === 'ns'; });
+  if (curFilter === 'ps')   list = list.filter(function(g) { return g.type === 'ps'; });
+  if (curFilter === 'code') list = list.filter(function(g) { return g.type === 'code'; });
+
+  if (curSearch) {
+    var q = curSearch.toLowerCase();
+    list = list.filter(function(g) { return g.title.toLowerCase().indexOf(q) !== -1; });
+  }
+
+  return list.slice().sort(function(a, b) {
+    if (curSort === 'name') return a.title.localeCompare(b.title);
+    var aP = a.normalPrice !== null ? a.normalPrice : (a.codePrice !== null ? a.codePrice : Infinity);
+    var bP = b.normalPrice !== null ? b.normalPrice : (b.codePrice !== null ? b.codePrice : Infinity);
+    return curSort === 'price-asc' ? aP - bP : bP - aP;
+  });
+}
+
+function render() {
+  // Disconnect observer before wiping DOM (avoid ghost observations)
+  coverIO.disconnect();
+
+  var grid = document.getElementById('gameGrid');
+  var list = getFiltered();
+  grid.innerHTML = '';
+
+  if (!list.length) {
+    var msg = document.createElement('div');
+    msg.className = 'state-msg';
+    msg.innerHTML = '<div class="icon">🔍</div><h3>No games found</h3><p>Try adjusting your search or filter.</p>';
+    grid.appendChild(msg);
+    document.getElementById('statsBar').style.display = 'none';
+    return;
+  }
+
+  // Render in a DocumentFragment for one repaint
+  var frag = document.createDocumentFragment();
+  list.forEach(function(g) { frag.appendChild(makeCard(g)); });
+  grid.appendChild(frag);
+
+  // Stats
+  var ns   = list.filter(function(g) { return g.type === 'ns'; }).length;
+  var ps   = list.filter(function(g) { return g.type === 'ps'; }).length;
+  var code = list.filter(function(g) { return g.type === 'code'; }).length;
+  var prices = list.map(function(g) {
+    return g.normalPrice !== null ? g.normalPrice : g.codePrice;
+  }).filter(function(p) { return p !== null; });
+  var minP = prices.length ? Math.min.apply(null, prices) : null;
+
+  document.getElementById('statTotal').textContent = list.length;
+  document.getElementById('statMin').textContent   = minP !== null ? '$' + minP.toFixed(2) : '—';
+  document.getElementById('statNS').textContent    = 'NS ' + ns;
+  document.getElementById('statPS').textContent    = 'PS ' + ps;
+  document.getElementById('statCode').textContent  = 'Code ' + code;
+  document.getElementById('statsBar').style.display = 'flex';
+}
+
+function showErr(msg) {
+  var grid = document.getElementById('gameGrid');
+  grid.innerHTML = '';
+  var el = document.createElement('div');
+  el.className = 'state-msg';
+  el.innerHTML = '<div class="icon">⚠️</div>'
+    + '<h3>Could not load catalog</h3>'
+    + '<p>' + msg + '</p>'
+    + '<div class="hint">Make sure the Google Sheet sharing is set to<br>'
+    + '<strong>"Anyone with the link → Viewer"</strong></div>';
+  grid.appendChild(el);
+}
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+loadAll()
+  .then(function(games) {
+    allGames = games;
+    render();
+  })
+  .catch(function(err) {
+    showErr(err.message || 'Unknown error.');
+  });
+
+// ── Events ──────────────────────────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  curSearch = e.target.value.trim();
+  render();
+});
+
+document.getElementById('sortSelect').addEventListener('change', function(e) {
+  curSort = e.target.value;
+  render();
+});
+
+document.getElementById('filterPills').addEventListener('click', function(e) {
+  var pill = e.target.closest('.f-pill');
+  if (!pill) return;
+  curFilter = pill.dataset.f;
+  document.querySelectorAll('.f-pill').forEach(function(p) { p.classList.remove('on'); });
+  pill.classList.add('on');
+  render();
+});
+</script>
+</body>
+</html>
