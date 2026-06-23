@@ -388,14 +388,17 @@ function setCachedGames(games) {
 }
 
 // ── Nintendo eShop EU search — direct CDN images, open CORS ─────────────────
-var NS_CONCURRENCY = 5;
-var nsQueue  = [];
-var nsActive = 0;
+var NS_CONCURRENCY = 10;
+var nsQueue   = [];
+var nsActive  = 0;
+var nsPending = {}; // key -> [callbacks] for in-flight deduplication
 
 function fetchNintendoCover(title, onDone) {
   var key = 'ns::' + title;
   if (imgCache[key] !== undefined) { onDone(imgCache[key] || null); return; }
-  nsQueue.push({ title: title, key: key, cb: onDone });
+  if (nsPending[key]) { nsPending[key].push(onDone); return; } // already in-flight
+  nsPending[key] = [onDone];
+  nsQueue.push({ title: title, key: key });
   drainNSQueue();
 }
 
@@ -413,11 +416,13 @@ function drainNSQueue() {
           var src  = (docs && docs[0] && docs[0].image_url) ? docs[0].image_url : '';
           imgCache[item.key] = src;
           saveImgCache();
-          item.cb(src || null);
+          (nsPending[item.key] || []).forEach(function(cb) { cb(src || null); });
+          delete nsPending[item.key];
         })
         .catch(function() {
           imgCache[item.key] = '';
-          item.cb(null);
+          (nsPending[item.key] || []).forEach(function(cb) { cb(null); });
+          delete nsPending[item.key];
         })
         .then(function() {
           nsActive--;
@@ -425,6 +430,27 @@ function drainNSQueue() {
         });
     })(nsQueue.shift());
   }
+}
+
+// Pre-fetch covers for all NS/code games immediately after data loads.
+// Results land in imgCache so the intersection observer finds them instantly.
+function prefetchNintendoCovers(games) {
+  var seen = {};
+  games.forEach(function(g) {
+    if ((g.type !== 'ns' && g.type !== 'code') || seen[g.title]) return;
+    seen[g.title] = true;
+    var key = 'ns::' + g.title;
+    if (imgCache[key] !== undefined) return; // already cached
+    fetchNintendoCover(g.title, function(src) {
+      if (!src) return;
+      // Apply to any matching card already in the DOM
+      document.querySelectorAll('.cover-wrap').forEach(function(wrap) {
+        if (wrap.dataset.title === g.title && !wrap.querySelector('.c-img.loaded')) {
+          applyImage(wrap, src);
+        }
+      });
+    });
+  });
 }
 
 // ── Microlink concurrent pool — fallback for PS / Codes ──────────────────────
@@ -464,35 +490,31 @@ function drainMLQueue() {
   }
 }
 
-// ── IntersectionObserver — trigger image load only when card is visible ──────
+// ── IntersectionObserver — apply cover when card enters viewport ─────────────
+// Prefetch has already started all NS requests; this just applies cached results
+// or attaches a callback to the in-flight request.
 var coverIO = new IntersectionObserver(function(entries) {
   entries.forEach(function(entry) {
     if (!entry.isIntersecting) return;
     var wrap  = entry.target;
     coverIO.unobserve(wrap);
-    var cover = wrap.dataset.cover; // direct URL from sheet column
+    var cover = wrap.dataset.cover;
     var type  = wrap.dataset.type;
     var title = wrap.dataset.title;
     var url   = wrap.dataset.url;
 
-    if (cover) {
-      applyImage(wrap, cover);
-      return;
-    }
+    if (cover) { applyImage(wrap, cover); return; }
 
     if (type === 'ns' || type === 'code') {
-      // Nintendo API for Switch games and digital codes
       fetchNintendoCover(title, function(src) {
         if (src) { applyImage(wrap, src); return; }
-        // Fall back to Microlink if Nintendo API returned nothing
         if (url) fetchMicrolink(url, function(s) { if (s) applyImage(wrap, s); });
       });
     } else {
-      // PS Store — use Microlink
       if (url) fetchMicrolink(url, function(src) { if (src) applyImage(wrap, src); });
     }
   });
-}, { rootMargin: '600px 0px' });
+}, { rootMargin: '300px 0px' });
 
 function applyImage(coverWrap, src) {
   var img = coverWrap.querySelector('.c-img');
@@ -774,6 +796,9 @@ function render() {
   document.getElementById('statPS').textContent    = 'PS ' + ps;
   document.getElementById('statCode').textContent  = 'Code ' + code;
   document.getElementById('statsBar').style.display = 'flex';
+
+  // Kick off cover prefetch for all NS/code games so images are ready before scroll
+  prefetchNintendoCovers(allGames);
 }
 
 function showErr(msg) {
