@@ -219,7 +219,7 @@ header {
 
 .plat-strip.ns   { background: rgba(200,0,10,.82); color: #fff; }
 .plat-strip.ps   { background: rgba(0,48,135,.82); color: #fff; }
-.plat-strip.code { background: rgba(62,207,126,.82); color: #0d0d10; }
+.plat-strip.code { background: rgba(255,220,0,.92); color: #0d0d10; }
 .plat-strip.unk  { background: rgba(30,30,38,.82); color: var(--muted); }
 
 /* ── Card body ── */
@@ -362,7 +362,7 @@ var COL_KEYS = {
 };
 
 // ── Image cache (localStorage) ──────────────────────────────────────────────
-var IMG_LS  = 'ibl_img_v3';
+var IMG_LS   = 'ibl_img_v3';
 var imgCache = {};
 try { imgCache = JSON.parse(localStorage.getItem(IMG_LS) || '{}'); } catch(e) {}
 
@@ -370,71 +370,103 @@ function saveImgCache() {
   try { localStorage.setItem(IMG_LS, JSON.stringify(imgCache)); } catch(e) {}
 }
 
-// ── Microlink queue (rate-limited to avoid free-tier overuse) ───────────────
-var mlQueue   = [];
-var mlRunning = false;
-
-function queueImage(storeUrl, onDone) {
-  if (!storeUrl) { onDone(null); return; }
-  var full = storeUrl.startsWith('http') ? storeUrl : 'https://' + storeUrl;
-
-  // Instant cache hit
-  if (imgCache[full] !== undefined) { onDone(imgCache[full] || null); return; }
-
-  mlQueue.push({ url: full, cb: onDone });
-  if (!mlRunning) drainMLQueue();
+// ── Nintendo CDN — instant cover art, no API call needed ────────────────────
+function getNintendoCdnUrl(storeUrl) {
+  if (!storeUrl || storeUrl.indexOf('nintendo.com') === -1) return null;
+  var m = storeUrl.match(/products\/([a-z0-9][a-z0-9-]+)\/?/i);
+  if (!m) return null;
+  var slug    = m[1].toLowerCase();
+  var variant = slug.endsWith('-switch-2') ? 'switch-2' : 'switch';
+  return 'https://assets.nintendo.com/image/upload/c_fill,f_auto,g_auto,q_auto,w_460'
+       + '/ncom/software/' + variant + '/' + slug + '/hero';
 }
 
-function drainMLQueue() {
-  if (!mlQueue.length) { mlRunning = false; return; }
-  mlRunning = true;
-  var item = mlQueue.shift();
+// ── Microlink — parallel semaphore (4 concurrent) ───────────────────────────
+var ML_MAX   = 4;
+var mlActive = 0;
+var mlQueue  = [];
 
-  fetch('https://api.microlink.io/?url=' + encodeURIComponent(item.url))
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      var src = (d && d.data && d.data.image && d.data.image.url) ? d.data.image.url : '';
-      imgCache[item.url] = src;
-      saveImgCache();
-      item.cb(src || null);
-    })
-    .catch(function() {
-      imgCache[item.url] = '';
-      item.cb(null);
-    })
-    .then(function() {
-      setTimeout(drainMLQueue, 350); // ~3 req/sec max — stays within free tier
-    });
+function mlFetch(url, onDone) {
+  if (imgCache[url] !== undefined) { onDone(imgCache[url] || null); return; }
+  mlQueue.push({ url: url, cb: onDone });
+  mlTick();
 }
 
-// ── IntersectionObserver — trigger image load only when card is visible ──────
-var coverIO = new IntersectionObserver(function(entries) {
-  entries.forEach(function(entry) {
-    if (!entry.isIntersecting) return;
-    var wrap = entry.target;
-    coverIO.unobserve(wrap);
-    var storeUrl = wrap.dataset.url;
-    if (!storeUrl) return;
+function mlTick() {
+  while (mlActive < ML_MAX && mlQueue.length > 0) {
+    var item = mlQueue.shift();
+    mlActive++;
+    (function(it) {
+      fetch('https://api.microlink.io/?url=' + encodeURIComponent(it.url))
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var src = (d && d.data && d.data.image && d.data.image.url) || '';
+          imgCache[it.url] = src; saveImgCache();
+          it.cb(src || null);
+        })
+        .catch(function() { imgCache[it.url] = ''; it.cb(null); })
+        .then(function() { mlActive--; mlTick(); });
+    })(item);
+  }
+}
 
-    queueImage(storeUrl, function(imgUrl) {
-      if (!imgUrl) return;
-      applyImage(wrap, imgUrl);
-    });
-  });
-}, { rootMargin: '150px 0px' });
-
+// ── Apply a resolved image URL to a card cover ──────────────────────────────
 function applyImage(coverWrap, src) {
   var img = coverWrap.querySelector('.c-img');
   var ph  = coverWrap.querySelector('.cover-ph');
-  if (!img || !ph) return;
-
-  img.onload = function() {
-    img.classList.add('loaded');
-    ph.classList.add('hidden');
-  };
+  if (!img) return;
+  img.onload  = function() { img.classList.add('loaded'); if (ph) ph.classList.add('hidden'); };
   img.onerror = function() { /* keep placeholder */ };
   img.src = src;
 }
+
+// ── Load the cover for one card wrap ────────────────────────────────────────
+function loadImageFor(coverWrap) {
+  var url  = coverWrap.dataset.url;
+  var type = coverWrap.dataset.type;
+  if (!url) return;
+
+  // Instant cache hit
+  if (imgCache[url] !== undefined) {
+    if (imgCache[url]) applyImage(coverWrap, imgCache[url]);
+    return;
+  }
+
+  // Nintendo / Code: try CDN first (no API call — fast)
+  if (type === 'ns' || type === 'code') {
+    var cdnUrl = getNintendoCdnUrl(url);
+    if (cdnUrl) {
+      var img = coverWrap.querySelector('.c-img');
+      var ph  = coverWrap.querySelector('.cover-ph');
+      if (img) {
+        img.onload = function() {
+          imgCache[url] = cdnUrl; saveImgCache();
+          img.classList.add('loaded');
+          if (ph) ph.classList.add('hidden');
+        };
+        img.onerror = function() {
+          img.onerror = null; img.src = '';
+          // CDN miss → fall back to microlink
+          mlFetch(url, function(src) { if (src) applyImage(coverWrap, src); });
+        };
+        img.src = cdnUrl;
+        return;
+      }
+    }
+  }
+
+  // PlayStation (or no CDN match): microlink
+  mlFetch(url, function(src) { if (src) applyImage(coverWrap, src); });
+}
+
+// ── IntersectionObserver — start loading 400 px before card enters view ──────
+var coverIO = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (!entry.isIntersecting) return;
+    coverIO.unobserve(entry.target);
+    loadImageFor(entry.target);
+  });
+}, { rootMargin: '400px 0px' });
 
 // ── Parse a Google Sheet tab ────────────────────────────────────────────────
 function loadSheet(tabName) {
@@ -532,7 +564,7 @@ function platClass(g) {
 // ── Render one card ─────────────────────────────────────────────────────────
 function makeCard(game) {
   var pc       = platClass(game);
-  var platLbl  = game.platform || (pc === 'ns' ? 'Nintendo' : pc === 'ps' ? 'PlayStation' : pc === 'code' ? 'Code' : '');
+  var platLbl  = (pc === 'code') ? 'Code' : (game.platform || (pc === 'ns' ? 'Nintendo' : pc === 'ps' ? 'PlayStation' : ''));
   var rawUrl   = game.storeUrl || '';
   var fullUrl  = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl) : '';
 
@@ -583,7 +615,8 @@ function makeCard(game) {
 
   // Queue image load when this wrap scrolls into view
   if (fullUrl) {
-    coverWrap.dataset.url = fullUrl;
+    coverWrap.dataset.url  = fullUrl;
+    coverWrap.dataset.type = game.type;
     coverIO.observe(coverWrap);
   }
 
