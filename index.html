@@ -370,41 +370,59 @@ function saveImgCache() {
   try { localStorage.setItem(IMG_LS, JSON.stringify(imgCache)); } catch(e) {}
 }
 
-// ── Microlink queue (rate-limited to avoid free-tier overuse) ───────────────
-var mlQueue   = [];
-var mlRunning = false;
+// ── Game data cache (localStorage) ──────────────────────────────────────────
+var DATA_LS  = 'ibl_data_v1';
+var DATA_TTL = 10 * 60 * 1000; // 10 minutes
+
+function getCachedGames() {
+  try {
+    var c = JSON.parse(localStorage.getItem(DATA_LS) || 'null');
+    if (c && (Date.now() - c.ts < DATA_TTL)) return c.games;
+  } catch(e) {}
+  return null;
+}
+
+function setCachedGames(games) {
+  try { localStorage.setItem(DATA_LS, JSON.stringify({ ts: Date.now(), games: games })); } catch(e) {}
+}
+
+// ── Microlink concurrent pool (3 simultaneous, no artificial delay) ──────────
+var ML_CONCURRENCY = 3;
+var mlQueue  = [];
+var mlActive = 0;
 
 function queueImage(storeUrl, onDone) {
   if (!storeUrl) { onDone(null); return; }
   var full = storeUrl.startsWith('http') ? storeUrl : 'https://' + storeUrl;
 
-  // Instant cache hit
   if (imgCache[full] !== undefined) { onDone(imgCache[full] || null); return; }
 
   mlQueue.push({ url: full, cb: onDone });
-  if (!mlRunning) drainMLQueue();
+  drainMLQueue();
 }
 
 function drainMLQueue() {
-  if (!mlQueue.length) { mlRunning = false; return; }
-  mlRunning = true;
-  var item = mlQueue.shift();
-
-  fetch('https://api.microlink.io/?url=' + encodeURIComponent(item.url))
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      var src = (d && d.data && d.data.image && d.data.image.url) ? d.data.image.url : '';
-      imgCache[item.url] = src;
-      saveImgCache();
-      item.cb(src || null);
-    })
-    .catch(function() {
-      imgCache[item.url] = '';
-      item.cb(null);
-    })
-    .then(function() {
-      setTimeout(drainMLQueue, 350); // ~3 req/sec max — stays within free tier
-    });
+  while (mlQueue.length && mlActive < ML_CONCURRENCY) {
+    mlActive++;
+    (function(item) {
+      fetch('https://api.microlink.io/?url=' + encodeURIComponent(item.url))
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var src = (d && d.data && d.data.image && d.data.image.url) ? d.data.image.url : '';
+          imgCache[item.url] = src;
+          saveImgCache();
+          item.cb(src || null);
+        })
+        .catch(function() {
+          imgCache[item.url] = '';
+          item.cb(null);
+        })
+        .then(function() {
+          mlActive--;
+          drainMLQueue();
+        });
+    })(mlQueue.shift());
+  }
 }
 
 // ── IntersectionObserver — trigger image load only when card is visible ──────
@@ -421,7 +439,7 @@ var coverIO = new IntersectionObserver(function(entries) {
       applyImage(wrap, imgUrl);
     });
   });
-}, { rootMargin: '150px 0px' });
+}, { rootMargin: '600px 0px' });
 
 function applyImage(coverWrap, src) {
   var img = coverWrap.querySelector('.c-img');
@@ -717,13 +735,21 @@ function showErr(msg) {
 }
 
 // ── Boot ────────────────────────────────────────────────────────────────────
+// Render from cache instantly, then refresh in background
+var cached = getCachedGames();
+if (cached && cached.length) {
+  allGames = cached;
+  render();
+}
+
 loadAll()
   .then(function(games) {
+    setCachedGames(games);
     allGames = games;
     render();
   })
   .catch(function(err) {
-    showErr(err.message || 'Unknown error.');
+    if (!allGames.length) showErr(err.message || 'Unknown error.');
   });
 
 // ── Events ──────────────────────────────────────────────────────────────────
