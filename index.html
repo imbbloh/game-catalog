@@ -425,9 +425,10 @@ function drainNSQueue() {
   while (nsQueue.length && nsActive < NS_CONCURRENCY) {
     nsActive++;
     (function(item) {
-      var api = 'https://searching.nintendo-europe.com/en/select?rows=1&wt=json&fl=image_url'
+      var nsApi = 'https://searching.nintendo-europe.com/en/select?rows=1&wt=json&fl=image_url'
               + '&fq=type%3AGAME%20AND%20system_names_txt%3A%22Nintendo%20Switch%22'
               + '&q=' + encodeURIComponent(item.title);
+      var api = 'https://corsproxy.io/?' + encodeURIComponent(nsApi);
       fetch(api)
         .then(function(r) { return r.json(); })
         .then(function(d) {
