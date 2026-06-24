@@ -6,6 +6,8 @@
 <title>imbbloh · Game Catalog</title>
 <meta name="description" content="Browse available digital games with pricing — Nintendo Switch & PlayStation">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://assets.nintendo.com" crossorigin>
+<link rel="dns-prefetch" href="https://searching.nintendo-europe.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -809,6 +811,27 @@ function render() {
   document.getElementById('statPS').textContent    = 'PS ' + ps;
   document.getElementById('statCode').textContent  = 'Code ' + code;
   document.getElementById('statsBar').style.display = 'flex';
+
+  // Eager-apply covers for cards already in the viewport (no observer delay)
+  document.querySelectorAll('.cover-wrap').forEach(function(wrap) {
+    var r = wrap.getBoundingClientRect();
+    if (r.top < window.innerHeight + 300) {
+      coverIO.unobserve(wrap);
+      var cover = wrap.dataset.cover;
+      var type  = wrap.dataset.type;
+      var title = wrap.dataset.title;
+      var url   = wrap.dataset.url;
+      if (cover) { applyImage(wrap, cover); }
+      else if (type === 'ns' || type === 'code') {
+        fetchNintendoCover(title, function(src) {
+          if (src) { applyImage(wrap, src); return; }
+          if (url) fetchMicrolink(url, function(s) { if (s) applyImage(wrap, s); });
+        });
+      } else {
+        if (url) fetchMicrolink(url, function(src) { if (src) applyImage(wrap, src); });
+      }
+    }
+  });
 
   // Kick off cover prefetch for all NS/code games so images are ready before scroll
   prefetchNintendoCovers(allGames);
