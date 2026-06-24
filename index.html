@@ -451,12 +451,8 @@ function drainNSQueue() {
 // Write a discovered cover URL back to the sheet so future loads skip the API
 function writeCoverToSheet(title, url) {
   if (!SCRIPT_URL || !url) return;
-  fetch(SCRIPT_URL, {
-    method: 'POST',
-    mode: 'no-cors', // fire-and-forget; response not needed
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ title: title, url: url }),
-  }).catch(function() {});
+  fetch(SCRIPT_URL + '?action=write&title=' + encodeURIComponent(title) + '&url=' + encodeURIComponent(url))
+    .catch(function() {});
 }
 
 // Pre-fetch covers for all NS/code games immediately after data loads.
