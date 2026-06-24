@@ -342,7 +342,8 @@ header {
 </div>
 <script>
 // ── Config ─────────────────────────────────────────────────────────────────
-var SHEET_ID = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
+var SHEET_ID  = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
+var SCRIPT_URL = ''; // paste your Apps Script web app URL here
 
 // Each entry maps a sheet tab to a listing type
 var SHEETS = [
@@ -416,6 +417,7 @@ function drainNSQueue() {
           var src  = (docs && docs[0] && docs[0].image_url) ? docs[0].image_url : '';
           imgCache[item.key] = src;
           saveImgCache();
+          if (src) writeCoverToSheet(item.title, src); // persist to sheet
           (nsPending[item.key] || []).forEach(function(cb) { cb(src || null); });
           delete nsPending[item.key];
         })
@@ -430,6 +432,17 @@ function drainNSQueue() {
         });
     })(nsQueue.shift());
   }
+}
+
+// Write a discovered cover URL back to the sheet so future loads skip the API
+function writeCoverToSheet(title, url) {
+  if (!SCRIPT_URL || !url) return;
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors', // fire-and-forget; response not needed
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ title: title, url: url }),
+  }).catch(function() {});
 }
 
 // Pre-fetch covers for all NS/code games immediately after data loads.
