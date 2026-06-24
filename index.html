@@ -347,8 +347,10 @@ header {
 var SHEET_ID   = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
 var SCRIPT_URL = ''; // paste your Apps Script web app URL here
 
-// Column F (index 5) = Nintendo eShop URL — used for store links and cover art.
-var URL_COL_OVERRIDE = 5;
+// Column E (index 4) = Game URL — actual store links.
+var URL_COL_OVERRIDE = 4;
+// Column F (index 5) = Nintendo eShop page title — used as search query for cover art.
+var ESHOP_TITLE_COL = 5;
 
 // Each entry maps a sheet tab to a listing type
 var SHEETS = [
@@ -457,11 +459,11 @@ function prefetchNintendoCovers(games) {
   games.forEach(function(g) {
     if ((g.type !== 'ns' && g.type !== 'code') || seen[g.title]) return;
     seen[g.title] = true;
-    var key = 'ns::' + g.title;
+    var query = g.eshopTitle || g.title; // prefer eShop title for better match
+    var key   = 'ns::' + query;
     if (imgCache[key] !== undefined) return; // already cached
-    fetchNintendoCover(g.title, function(src) {
+    fetchNintendoCover(query, function(src) {
       if (!src) return;
-      // Apply to any matching card already in the DOM
       document.querySelectorAll('.cover-wrap').forEach(function(wrap) {
         if (wrap.dataset.title === g.title && !wrap.querySelector('.c-img.loaded')) {
           applyImage(wrap, src);
@@ -518,7 +520,7 @@ var coverIO = new IntersectionObserver(function(entries) {
     coverIO.unobserve(wrap);
     var cover = wrap.dataset.cover;
     var type  = wrap.dataset.type;
-    var title = wrap.dataset.title;
+    var title = wrap.dataset.nsq || wrap.dataset.title; // prefer eShop title for search
     var url   = wrap.dataset.url;
 
     if (cover) { applyImage(wrap, cover); return; }
@@ -620,6 +622,7 @@ function loadSheet(tabName) {
         });
       });
       if (URL_COL_OVERRIDE >= 0) idx.url = URL_COL_OVERRIDE;
+      idx.eshopTitle = ESHOP_TITLE_COL;
 
       function get(row, i) {
         if (i < 0 || !row.c || !row.c[i]) return '';
@@ -644,6 +647,7 @@ function loadSheet(tabName) {
             codePrice:    toPrice(get(row, idx.price)),
             platform:     String(get(row, idx.platform)).trim(),
             storeUrl:     String(get(row, idx.url)).trim(),
+            eshopTitle:   String(get(row, idx.eshopTitle)).trim(),
             coverUrl:     String(get(row, idx.cover)).trim(),
           };
         })
@@ -742,8 +746,9 @@ function makeCard(game) {
   // Tag the wrap so the IntersectionObserver knows how to fetch the image
   coverWrap.dataset.type  = pc;
   coverWrap.dataset.title = game.title;
-  if (game.coverUrl) coverWrap.dataset.cover = game.coverUrl;
-  if (fullUrl)       coverWrap.dataset.url   = fullUrl;
+  if (game.coverUrl)   coverWrap.dataset.cover = game.coverUrl;
+  if (fullUrl)         coverWrap.dataset.url   = fullUrl;
+  if (game.eshopTitle) coverWrap.dataset.nsq   = game.eshopTitle; // Nintendo search query
   coverIO.observe(coverWrap);
 
   card.appendChild(coverWrap);
