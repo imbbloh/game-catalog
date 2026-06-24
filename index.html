@@ -371,7 +371,7 @@ var COL_KEYS = {
 };
 
 // ── Image cache (localStorage) ──────────────────────────────────────────────
-var IMG_LS  = 'ibl_img_v4'; // bumped: ns:: keys added, old Microlink failures cleared
+var IMG_LS  = 'ibl_img_v5'; // bumped: cleaned NS queries, stale empty results cleared
 var imgCache = {};
 try { imgCache = JSON.parse(localStorage.getItem(IMG_LS) || '{}'); } catch(e) {}
 
@@ -396,17 +396,28 @@ function setCachedGames(games) {
 }
 
 // ── Nintendo eShop EU search — direct CDN images, open CORS ─────────────────
-var NS_CONCURRENCY = 10;
+var NS_CONCURRENCY = 6; // reduced to avoid rate limiting
 var nsQueue   = [];
 var nsActive  = 0;
 var nsPending = {}; // key -> [callbacks] for in-flight deduplication
 
-function fetchNintendoCover(title, onDone) {
-  var key = 'ns::' + title;
+// Strip noise that breaks Nintendo EU search queries
+function cleanNSQuery(title) {
+  return title
+    .replace(/\s*[-–]\s*Nintendo Official Site\s*/gi, '')
+    .replace(/\s+for Nintendo Switch(™| 2)?\s*/gi, '')
+    .replace(/Nintendo Switch(™| 2)?\s*(Edition|Version)?\s*/gi, '')
+    .replace(/[™®©]/g, '')
+    .trim();
+}
+
+function fetchNintendoCover(rawTitle, onDone) {
+  var title = cleanNSQuery(rawTitle);
+  var key   = 'ns::' + title;
   if (imgCache[key] !== undefined) { onDone(imgCache[key] || null); return; }
-  if (nsPending[key]) { nsPending[key].push(onDone); return; } // already in-flight
+  if (nsPending[key]) { nsPending[key].push(onDone); return; }
   nsPending[key] = [onDone];
-  nsQueue.push({ title: title, key: key });
+  nsQueue.push({ title: title, key: key, rawTitle: rawTitle });
   drainNSQueue();
 }
 
@@ -424,7 +435,7 @@ function drainNSQueue() {
           var src  = (docs && docs[0] && docs[0].image_url) ? docs[0].image_url : '';
           imgCache[item.key] = src;
           saveImgCache();
-          if (src) writeCoverToSheet(item.title, src); // persist to sheet
+          if (src) writeCoverToSheet(item.rawTitle, src);
           (nsPending[item.key] || []).forEach(function(cb) { cb(src || null); });
           delete nsPending[item.key];
         })
@@ -459,16 +470,30 @@ function prefetchNintendoCovers(games) {
   games.forEach(function(g) {
     if ((g.type !== 'ns' && g.type !== 'code') || seen[g.title]) return;
     seen[g.title] = true;
-    var query = g.eshopTitle || g.title; // prefer eShop title for better match
-    var key   = 'ns::' + query;
-    if (imgCache[key] !== undefined) return; // already cached
-    fetchNintendoCover(query, function(src) {
+
+    function applyToCards(src) {
       if (!src) return;
       document.querySelectorAll('.cover-wrap').forEach(function(wrap) {
         if (wrap.dataset.title === g.title && !wrap.querySelector('.c-img.loaded')) {
           applyImage(wrap, src);
         }
       });
+    }
+
+    // Try eShop title first (column F), fall back to plain game title (column A)
+    var primaryQuery   = g.eshopTitle || g.title;
+    var fallbackQuery  = g.title;
+    var primaryKey     = 'ns::' + cleanNSQuery(primaryQuery);
+    var fallbackKey    = 'ns::' + cleanNSQuery(fallbackQuery);
+
+    if (imgCache[primaryKey] !== undefined) { applyToCards(imgCache[primaryKey]); return; }
+
+    fetchNintendoCover(primaryQuery, function(src) {
+      if (src) { applyToCards(src); return; }
+      // Primary failed — try plain title if it's different
+      if (cleanNSQuery(primaryQuery) === cleanNSQuery(fallbackQuery)) return;
+      if (imgCache[fallbackKey] !== undefined) { applyToCards(imgCache[fallbackKey]); return; }
+      fetchNintendoCover(fallbackQuery, function(s) { applyToCards(s); });
     });
   });
 }
