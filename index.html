@@ -351,6 +351,8 @@ var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvxjWK8ZW-R8nh8SNKM9o
 var URL_COL_OVERRIDE = 4;
 // Column F (index 5) = Nintendo eShop page title — used as search query for cover art.
 var ESHOP_TITLE_COL = 5;
+// Column I (index 8) = COVER URL — primary source for cover art; lookups run only when empty.
+var COVER_COL_OVERRIDE = 8;
 
 // Each entry maps a sheet tab to a listing type
 var SHEETS = [
@@ -380,7 +382,7 @@ function saveImgCache() {
 }
 
 // ── Game data cache (localStorage) ──────────────────────────────────────────
-var DATA_LS  = 'ibl_data_v1';
+var DATA_LS  = 'ibl_data_v2'; // bumped: coverUrl now read from fixed column I
 var DATA_TTL = 10 * 60 * 1000; // 10 minutes
 
 function getCachedGames() {
@@ -461,6 +463,7 @@ function prefetchNintendoCovers(games) {
   var seen = {};
   games.forEach(function(g) {
     if ((g.type !== 'ns' && g.type !== 'code') || seen[g.title]) return;
+    if (g.coverUrl && g.coverUrl.startsWith('http')) return; // sheet already provides the cover — no lookup needed
     seen[g.title] = true;
 
     function applyToCards(src) {
@@ -534,30 +537,45 @@ function drainMLQueue() {
 var coverIO = new IntersectionObserver(function(entries) {
   entries.forEach(function(entry) {
     if (!entry.isIntersecting) return;
-    var wrap  = entry.target;
+    var wrap = entry.target;
     coverIO.unobserve(wrap);
-    var cover = wrap.dataset.cover;
-    var type  = wrap.dataset.type;
-    var title = wrap.dataset.nsq || wrap.dataset.title; // prefer eShop title for search
-    var url   = wrap.dataset.url;
-
-    if (cover) { applyImage(wrap, cover); return; }
-
-    if (type === 'ns' || type === 'code') {
-      fetchNintendoCover(title, function(src) {
-        if (src) applyImage(wrap, src);
-      });
-    }
+    resolveCover(wrap);
   });
 }, { rootMargin: '300px 0px' });
 
+// ── Cover resolution — sheet COVER URL first, API lookups as fallback ────────
+function lookupCover(wrap) {
+  var type  = wrap.dataset.type;
+  var title = wrap.dataset.nsq || wrap.dataset.title; // prefer eShop title for search
+  var url   = wrap.dataset.url;
+
+  if (type === 'ns' || type === 'code') {
+    fetchNintendoCover(title, function(src) {
+      if (src) { applyImage(wrap, src); return; }
+      if (url) fetchMicrolink(url, function(s) { if (s) applyImage(wrap, s); });
+    });
+  } else if (url) {
+    fetchMicrolink(url, function(src) { if (src) applyImage(wrap, src); });
+  }
+}
+
+function resolveCover(wrap) {
+  var cover = wrap.dataset.cover;
+  if (cover) {
+    // Sheet cover is the primary source; fall back to lookups only if it fails to load
+    applyImage(wrap, cover, function() { lookupCover(wrap); });
+    return;
+  }
+  lookupCover(wrap);
+}
+
 // ── Apply a resolved image URL to a card cover ──────────────────────────────
-function applyImage(coverWrap, src) {
+function applyImage(coverWrap, src, onFail) {
   var img = coverWrap.querySelector('.c-img');
   var ph  = coverWrap.querySelector('.cover-ph');
   if (!img) return;
   img.onload  = function() { img.classList.add('loaded'); if (ph) ph.classList.add('hidden'); };
-  img.onerror = function() { /* keep placeholder */ };
+  img.onerror = function() { if (onFail) onFail(); }; // keep placeholder unless fallback succeeds
   img.src = src;
 }
 
@@ -588,7 +606,8 @@ function loadSheet(tabName) {
           return COL_KEYS[key].some(function(k) { return h.indexOf(k) !== -1; });
         });
       });
-      if (URL_COL_OVERRIDE >= 0) idx.url = URL_COL_OVERRIDE;
+      if (URL_COL_OVERRIDE >= 0)   idx.url   = URL_COL_OVERRIDE;
+      if (COVER_COL_OVERRIDE >= 0) idx.cover = COVER_COL_OVERRIDE;
       idx.eshopTitle = ESHOP_TITLE_COL;
 
       function get(row, i) {
@@ -713,7 +732,7 @@ function makeCard(game) {
   // Tag the wrap so the IntersectionObserver knows how to fetch the image
   coverWrap.dataset.type  = pc;
   coverWrap.dataset.title = game.title;
-  if (game.coverUrl)   coverWrap.dataset.cover = game.coverUrl;
+  if (game.coverUrl && game.coverUrl.startsWith('http')) coverWrap.dataset.cover = game.coverUrl;
   if (fullUrl)         coverWrap.dataset.url   = fullUrl;
   if (game.eshopTitle) coverWrap.dataset.nsq   = game.eshopTitle; // Nintendo search query
   coverIO.observe(coverWrap);
@@ -838,19 +857,7 @@ function render() {
     var r = wrap.getBoundingClientRect();
     if (r.top < window.innerHeight + 300) {
       coverIO.unobserve(wrap);
-      var cover = wrap.dataset.cover;
-      var type  = wrap.dataset.type;
-      var title = wrap.dataset.title;
-      var url   = wrap.dataset.url;
-      if (cover) { applyImage(wrap, cover); }
-      else if (type === 'ns' || type === 'code') {
-        fetchNintendoCover(title, function(src) {
-          if (src) { applyImage(wrap, src); return; }
-          if (url) fetchMicrolink(url, function(s) { if (s) applyImage(wrap, s); });
-        });
-      } else {
-        if (url) fetchMicrolink(url, function(src) { if (src) applyImage(wrap, src); });
-      }
+      resolveCover(wrap);
     }
   });
 
