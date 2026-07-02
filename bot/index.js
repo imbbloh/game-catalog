@@ -1,16 +1,15 @@
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
-const { google } = require('googleapis');
+const https = require('https');
 
-// ── Config (set these as Render environment variables) ────────────────────────
+// ── Config ────────────────────────────────────────────────────────────────────
 const BOT_TOKEN      = process.env.BOT_TOKEN;
-const WEBHOOK_URL    = process.env.WEBHOOK_URL; // e.g. https://your-app.onrender.com
-const SHEET_ID       = process.env.SHEET_ID || '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
-const GOOGLE_CREDS   = process.env.GOOGLE_CREDS; // service account JSON string
+const WEBHOOK_URL    = process.env.WEBHOOK_URL;
+const SHEET_ID       = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
 const CAROUSELL_USER = 'im.bbloh';
 const PORT           = process.env.PORT || 3000;
 
-// ── Telegram bot (webhook mode) ───────────────────────────────────────────────
+// ── Telegram bot ──────────────────────────────────────────────────────────────
 const app = express();
 app.use(express.json());
 
@@ -24,66 +23,79 @@ app.post(`/bot${BOT_TOKEN}`, (req, res) => {
 
 app.get('/', (req, res) => res.send('Game Catalog Bot is running.'));
 
-// ── Google Sheets client ──────────────────────────────────────────────────────
-let sheetsClient = null;
-
-async function getSheetsClient() {
-  if (sheetsClient) return sheetsClient;
-  const creds = JSON.parse(GOOGLE_CREDS);
-  const auth  = new google.auth.GoogleAuth({
-    credentials: creds,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-  });
-  sheetsClient = google.sheets({ version: 'v4', auth });
-  return sheetsClient;
-}
-
-// ── Game data cache (5 min TTL) ───────────────────────────────────────────────
+// ── Sheet data via public gviz URL (no auth needed) ───────────────────────────
 let gamesCache     = null;
 let gamesCacheTime = 0;
 
+function fetchSheet() {
+  return new Promise((resolve, reject) => {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/)[1]);
+          const table = json.table;
+          const headers = table.cols.map(c => (c.label || '').toLowerCase().trim());
+
+          function colIdx(keywords) {
+            return headers.findIndex(h => keywords.some(k => h.includes(k)));
+          }
+
+          const iTitle    = 0;
+          const iNormal   = colIdx(['normal']);
+          const iPremium  = colIdx(['premium']);
+          const iPlatform = colIdx(['platform']);
+          const iUrl      = 4; // column E
+          const iCover    = colIdx(['cover']);
+
+          function val(row, i) {
+            if (i < 0 || !row.c || !row.c[i]) return '';
+            const v = row.c[i].v;
+            return v !== null && v !== undefined ? String(v) : '';
+          }
+
+          const games = table.rows
+            .filter(row => row.c && row.c[iTitle] && row.c[iTitle].v)
+            .map(row => ({
+              title:    val(row, iTitle).trim(),
+              normal:   parseFloat(val(row, iNormal)) || null,
+              premium:  parseFloat(val(row, iPremium)) || null,
+              platform: val(row, iPlatform).trim(),
+              url:      val(row, iUrl).trim(),
+              cover:    val(row, iCover).trim(),
+            }));
+
+          resolve(games);
+        } catch(e) { reject(e); }
+      });
+    }).on('error', reject);
+  });
+}
+
 async function getGames() {
   if (gamesCache && Date.now() - gamesCacheTime < 5 * 60 * 1000) return gamesCache;
-
-  const sheets   = await getSheetsClient();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: 'A2:I',
-  });
-
-  const rows = response.data.values || [];
-  gamesCache = rows
-    .filter(r => r[0] && r[0].trim())
-    .map(r => ({
-      title:    (r[0] || '').trim(),
-      normal:   parseFloat(r[1]) || null,
-      premium:  parseFloat(r[2]) || null,
-      platform: (r[3] || '').trim(),
-      url:      (r[4] || '').trim(),
-      cover:    (r[8] || '').trim(),
-    }));
-
+  gamesCache     = await fetchSheet();
   gamesCacheTime = Date.now();
   return gamesCache;
 }
 
-// ── Search logic ──────────────────────────────────────────────────────────────
+// ── Search ────────────────────────────────────────────────────────────────────
 function searchGames(games, query) {
   const words = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 1);
   const matches = [];
-
   games.forEach(g => {
-    const tl    = g.title.toLowerCase().replace(/[^a-z0-9\s]/g, '');
-    let score   = 0;
+    const tl  = g.title.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+    let score = 0;
     words.forEach(w => { if (tl.includes(w)) score++; });
     if (score > 0) matches.push({ g, score });
   });
-
   matches.sort((a, b) => b.score - a.score);
   return matches;
 }
 
-// ── Message handlers ──────────────────────────────────────────────────────────
+// ── Bot commands ──────────────────────────────────────────────────────────────
 bot.onText(/\/(start|help)/i, (msg) => {
   bot.sendMessage(msg.chat.id, helpText(), { parse_mode: 'HTML' });
 });
@@ -155,5 +167,5 @@ function helpText() {
     + '🛒 Carousell listing';
 }
 
-// ── Start server ──────────────────────────────────────────────────────────────
+// ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => console.log(`Bot running on port ${PORT}`));
