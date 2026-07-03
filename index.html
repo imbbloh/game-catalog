@@ -716,6 +716,21 @@ function loadSheet(tabName) {
     });
 }
 
+// ── Fastest path: static games.json snapshot on our own origin ──────────────
+// Rebuilt from the sheet every 15 min by a GitHub Action; served by the
+// Pages CDN. 'no-cache' revalidates via ETag so updates show up immediately.
+function loadStatic() {
+  return fetch('games.json', { cache: 'no-cache' })
+    .then(function(r) {
+      if (!r.ok) throw new Error('static ' + r.status);
+      return r.json();
+    })
+    .then(function(d) {
+      if (!d || !d.games || !d.games.length) throw new Error('static empty');
+      return d.games;
+    });
+}
+
 // ── Fast path: cached catalog from the Render API ───────────────────────────
 function loadFromAPI() {
   if (!API_URL) return Promise.reject(new Error('no api configured'));
@@ -997,7 +1012,9 @@ if (cached && cached.length) {
   render();
 }
 
-firstSuccess([loadFromAPI(), loadAll()])
+var directLoad = loadAll();
+
+firstSuccess([loadStatic(), loadFromAPI(), directLoad])
   .then(function(games) {
     setCachedGames(games);
     allGames = games;
@@ -1007,6 +1024,16 @@ firstSuccess([loadFromAPI(), loadAll()])
   .catch(function(err) {
     if (!allGames.length) showErr(err.message || 'Unknown error.');
   });
+
+// The static snapshot can lag the sheet by up to ~15 min — once the direct
+// sheet read finishes, re-render if it actually differs from what we showed.
+directLoad.then(function(games) {
+  if (games.length && JSON.stringify(games) !== JSON.stringify(allGames)) {
+    setCachedGames(games);
+    allGames = games;
+    render();
+  }
+}).catch(function() {});
 
 // ── Events ──────────────────────────────────────────────────────────────────
 document.getElementById('searchInput').addEventListener('input', function(e) {
