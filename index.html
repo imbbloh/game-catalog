@@ -6,6 +6,7 @@
 <title>imbbloh · Game Catalog</title>
 <meta name="description" content="Browse available digital games with pricing — Nintendo Switch & PlayStation">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://docs.google.com" crossorigin>
 <link rel="preconnect" href="https://assets.nintendo.com" crossorigin>
 <link rel="dns-prefetch" href="https://searching.nintendo-europe.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
@@ -346,6 +347,10 @@ header {
 // ── Config ─────────────────────────────────────────────────────────────────
 var SHEET_ID   = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvxjWK8ZW-R8nh8SNKM9ob1ywkQaHInX5lKaM3qa2TbrdletRK6jj-u61gTZ4eOavS3Q/exec';
+
+// Render.com API — serves the whole merged catalog from an in-memory cache
+// (much faster than 3 direct Google Sheets requests). Leave '' to disable.
+var API_URL = '';
 
 // Column E (index 4) = Game URL — actual store links.
 var URL_COL_OVERRIDE = 4;
@@ -711,6 +716,41 @@ function loadSheet(tabName) {
     });
 }
 
+// ── Fast path: cached catalog from the Render API ───────────────────────────
+function loadFromAPI() {
+  if (!API_URL) return Promise.reject(new Error('no api configured'));
+  var ctrl  = ('AbortController' in window) ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function() { ctrl.abort(); }, 5000) : null;
+  return fetch(API_URL.replace(/\/+$/, '') + '/api/games', ctrl ? { signal: ctrl.signal } : {})
+    .then(function(r) {
+      if (!r.ok) throw new Error('api ' + r.status);
+      return r.json();
+    })
+    .then(function(d) {
+      if (timer) clearTimeout(timer);
+      if (!d || !d.games || !d.games.length) throw new Error('api empty');
+      return d.games;
+    })
+    .catch(function(e) {
+      if (timer) clearTimeout(timer);
+      throw e;
+    });
+}
+
+// Resolve with the first promise that succeeds; reject only if all fail.
+function firstSuccess(promises) {
+  return new Promise(function(resolve, reject) {
+    var pending = promises.length;
+    var lastErr = null;
+    promises.forEach(function(p) {
+      p.then(resolve, function(e) {
+        lastErr = e;
+        if (--pending === 0) reject(lastErr);
+      });
+    });
+  });
+}
+
 // ── Load all three sheets in parallel ──────────────────────────────────────
 function loadAll() {
   return Promise.allSettled(
@@ -957,7 +997,7 @@ if (cached && cached.length) {
   render();
 }
 
-loadAll()
+firstSuccess([loadFromAPI(), loadAll()])
   .then(function(games) {
     setCachedGames(games);
     allGames = games;
