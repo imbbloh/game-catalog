@@ -5,11 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>imbbloh · Game Catalog</title>
 <meta name="description" content="Browse available digital games with pricing — Nintendo Switch & PlayStation">
+<link rel="preload" href="games.json" as="fetch" crossorigin="anonymous">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://docs.google.com" crossorigin>
 <link rel="preconnect" href="https://assets.nintendo.com" crossorigin>
+<link rel="preconnect" href="https://image.api.playstation.com" crossorigin>
 <link rel="dns-prefetch" href="https://searching.nintendo-europe.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<!-- Load fonts without blocking first paint; system fonts show meanwhile -->
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"></noscript>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -348,9 +353,9 @@ header {
 var SHEET_ID   = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
 var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyvxjWK8ZW-R8nh8SNKM9ob1ywkQaHInX5lKaM3qa2TbrdletRK6jj-u61gTZ4eOavS3Q/exec';
 
-// Render.com API — serves the whole merged catalog from an in-memory cache
-// (much faster than 3 direct Google Sheets requests). Leave '' to disable.
-var API_URL = 'https://artfetcher.onrender.com';
+// Optional API fallback serving the merged catalog (unused — the static
+// games.json snapshot is the primary fast path). Leave '' to disable.
+var API_URL = '';
 
 // Column E (index 4) = Game URL — actual store links.
 var URL_COL_OVERRIDE = 4;
@@ -718,9 +723,10 @@ function loadSheet(tabName) {
 
 // ── Fastest path: static games.json snapshot on our own origin ──────────────
 // Rebuilt from the sheet every 15 min by a GitHub Action; served by the
-// Pages CDN. 'no-cache' revalidates via ETag so updates show up immediately.
+// Pages CDN. Plain fetch so it reuses the <link rel="preload"> request;
+// the direct sheet read re-renders afterwards if this copy is stale.
 function loadStatic() {
-  return fetch('games.json', { cache: 'no-cache' })
+  return fetch('games.json')
     .then(function(r) {
       if (!r.ok) throw new Error('static ' + r.status);
       return r.json();
