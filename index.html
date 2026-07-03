@@ -372,8 +372,36 @@ var COL_KEYS = {
   cover:   ['cover url', 'cover image', 'cover', 'image url', 'image', 'thumbnail'],
 };
 
+// ── Debug mode (?debug=1) — shows what the site parsed from each sheet ──────
+var DEBUG = /[?&]debug=1/.test(location.search);
+
+function dbgLog(tab, headers, idx) {
+  if (!DEBUG) return;
+  var el = document.getElementById('dbgPanel');
+  if (!el) {
+    el = document.createElement('pre');
+    el.id = 'dbgPanel';
+    el.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:45vh;overflow:auto;'
+      + 'background:#000;color:#3ecf7e;font:11px monospace;padding:10px;z-index:99;'
+      + 'border-top:2px solid #f0c140;white-space:pre-wrap;word-break:break-all;';
+    document.body.appendChild(el);
+  }
+  el.textContent += '── ' + tab + ' ──\n'
+    + 'headers: ' + JSON.stringify(headers) + '\n'
+    + 'columns: ' + JSON.stringify(idx) + '\n';
+}
+
+function dbgGames(games) {
+  if (!DEBUG) return;
+  var el = document.getElementById('dbgPanel');
+  if (!el) return;
+  el.textContent += '── parsed games ──\n' + games.map(function(g) {
+    return '[' + g.type + '] ' + g.title + ' → cover: ' + (g.coverUrl || '(empty)');
+  }).join('\n') + '\n';
+}
+
 // ── Image cache (localStorage) ──────────────────────────────────────────────
-var IMG_LS  = 'ibl_img_v5'; // bumped: cleaned NS queries, stale empty results cleared
+var IMG_LS  = 'ibl_img_v6'; // bumped: force cover refresh — discard stale scraped covers
 var imgCache = {};
 try { imgCache = JSON.parse(localStorage.getItem(IMG_LS) || '{}'); } catch(e) {}
 
@@ -382,7 +410,7 @@ function saveImgCache() {
 }
 
 // ── Game data cache (localStorage) ──────────────────────────────────────────
-var DATA_LS  = 'ibl_data_v2'; // bumped: coverUrl now read from fixed column I
+var DATA_LS  = 'ibl_data_v3'; // bumped: force cover refresh — re-parse sheet with new cover detection
 var DATA_TTL = 10 * 60 * 1000; // 10 minutes
 
 function getCachedGames() {
@@ -609,7 +637,17 @@ function loadSheet(tabName) {
       return data.table;
     })
     .then(function(table) {
+      var rows    = table.rows;
       var headers = table.cols.map(function(c) { return (c.label || '').toLowerCase().trim(); });
+
+      // gviz sometimes fails to auto-detect the header row (labels come back
+      // empty) — in that case the first data row IS the header row.
+      if (headers.join('') === '' && rows.length) {
+        headers = (rows[0].c || []).map(function(c) {
+          return c && c.v !== null && c.v !== undefined ? String(c.v).toLowerCase().trim() : '';
+        });
+        rows = rows.slice(1);
+      }
 
       // Map each semantic key to a column index
       var idx = {};
@@ -619,8 +657,10 @@ function loadSheet(tabName) {
         });
       });
       if (URL_COL_OVERRIDE >= 0)   idx.url   = URL_COL_OVERRIDE;
-      if (COVER_COL_OVERRIDE >= 0) idx.cover = COVER_COL_OVERRIDE;
+      if (COVER_COL_OVERRIDE >= 0 && idx.cover < 0) idx.cover = COVER_COL_OVERRIDE;
       idx.eshopTitle = ESHOP_TITLE_COL;
+
+      dbgLog(tabName, headers, idx);
 
       function get(row, i) {
         if (i < 0 || !row.c || !row.c[i]) return '';
@@ -633,7 +673,25 @@ function loadSheet(tabName) {
         return isNaN(n) ? null : n;
       }
 
-      return table.rows
+      // Cover URL: prefer the detected/pinned cover column; if that cell has
+      // no usable URL, scan the rest of the row for anything that looks like
+      // an image URL (robust against shifted/renamed columns).
+      var IMG_URL_RE  = /^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i;
+      var IMG_HOST_RE = /^https?:\/\/(image\.api\.playstation\.com|assets\.nintendo\.com|img-eshop\.cdn\.nintendo\.net|lh\d\.googleusercontent\.com|drive\.google\.com)\//i;
+
+      function rowCover(row) {
+        var v = get(row, idx.cover).trim();
+        if (/^https?:\/\//i.test(v)) return v;
+        var cells = row.c || [];
+        for (var i = 0; i < cells.length; i++) {
+          if (i === idx.url || i === idx.title) continue;
+          var s = (cells[i] && cells[i].v !== null && cells[i].v !== undefined) ? String(cells[i].v).trim() : '';
+          if (IMG_URL_RE.test(s) || IMG_HOST_RE.test(s)) return s;
+        }
+        return '';
+      }
+
+      return rows
         .filter(function(row) {
           return row.c && idx.title >= 0 && row.c[idx.title] && row.c[idx.title].v;
         })
@@ -646,7 +704,7 @@ function loadSheet(tabName) {
             platform:     String(get(row, idx.platform)).trim(),
             storeUrl:     String(get(row, idx.url)).trim(),
             eshopTitle:   String(get(row, idx.eshopTitle)).trim(),
-            coverUrl:     String(get(row, idx.cover)).trim(),
+            coverUrl:     rowCover(row),
           };
         })
         .filter(function(g) { return g.title.length > 0; });
@@ -904,6 +962,7 @@ loadAll()
     setCachedGames(games);
     allGames = games;
     render();
+    dbgGames(games);
   })
   .catch(function(err) {
     if (!allGames.length) showErr(err.message || 'Unknown error.');
