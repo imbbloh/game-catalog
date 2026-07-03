@@ -463,7 +463,7 @@ function prefetchNintendoCovers(games) {
   var seen = {};
   games.forEach(function(g) {
     if ((g.type !== 'ns' && g.type !== 'code') || seen[g.title]) return;
-    if (g.coverUrl && g.coverUrl.startsWith('http')) return; // sheet already provides the cover — no lookup needed
+    if (normalizeCoverUrl(g.coverUrl)) return; // sheet already provides the cover — no lookup needed
     seen[g.title] = true;
 
     function applyToCards(src) {
@@ -559,6 +559,17 @@ function lookupCover(wrap) {
   }
 }
 
+// Normalize a sheet COVER URL into something an <img> can actually load.
+// Google Drive / Dropbox share links point at HTML pages, not image files.
+function normalizeCoverUrl(u) {
+  u = String(u || '').trim();
+  if (!/^https?:\/\//i.test(u)) return '';
+  var m = u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:[^#]*&)?id=)([\w-]+)/);
+  if (m) return 'https://lh3.googleusercontent.com/d/' + m[1];
+  if (u.indexOf('dropbox.com') !== -1) return u.replace(/([?&])dl=0\b/, '$1raw=1');
+  return u;
+}
+
 function resolveCover(wrap) {
   var cover = wrap.dataset.cover;
   if (cover) {
@@ -576,6 +587,7 @@ function applyImage(coverWrap, src, onFail) {
   if (!img) return;
   img.onload  = function() { img.classList.add('loaded'); if (ph) ph.classList.add('hidden'); };
   img.onerror = function() { if (onFail) onFail(); }; // keep placeholder unless fallback succeeds
+  img.referrerPolicy = 'no-referrer'; // some CDNs (googleusercontent, PS store) block hotlink referrers
   img.src = src;
 }
 
@@ -732,7 +744,8 @@ function makeCard(game) {
   // Tag the wrap so the IntersectionObserver knows how to fetch the image
   coverWrap.dataset.type  = pc;
   coverWrap.dataset.title = game.title;
-  if (game.coverUrl && game.coverUrl.startsWith('http')) coverWrap.dataset.cover = game.coverUrl;
+  var sheetCover = normalizeCoverUrl(game.coverUrl);
+  if (sheetCover) coverWrap.dataset.cover = sheetCover;
   if (fullUrl)         coverWrap.dataset.url   = fullUrl;
   if (game.eshopTitle) coverWrap.dataset.nsq   = game.eshopTitle; // Nintendo search query
   coverIO.observe(coverWrap);
