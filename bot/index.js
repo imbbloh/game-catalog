@@ -24,61 +24,159 @@ app.post(`/bot${BOT_TOKEN}`, (req, res) => {
 app.get('/', (req, res) => res.send('Game Catalog Bot is running.'));
 
 // ── Sheet data via public gviz URL (no auth needed) ───────────────────────────
-let gamesCache     = null;
-let gamesCacheTime = 0;
+// Mirrors the website's parsing: column E = store URL, F = eShop title,
+// I = cover URL (with a row-scan fallback for image-looking URLs).
+const SHEET_TABS = [
+  { tab: 'Nintendo Switch Games',  type: 'ns' },
+  { tab: 'Playstation Games',      type: 'ps' },
+  { tab: 'Digital Codes - Switch', type: 'code' },
+];
 
-function fetchSheet() {
+const URL_COL   = 4;
+const ESHOP_COL = 5;
+const COVER_COL = 8;
+
+const IMG_URL_RE  = /^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i;
+const IMG_HOST_RE = /^https?:\/\/(image\.api\.playstation\.com|assets\.nintendo\.com|img-eshop\.cdn\.nintendo\.net|lh\d\.googleusercontent\.com|drive\.google\.com)\//i;
+
+function httpGet(url) {
   return new Promise((resolve, reject) => {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
     https.get(url, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(data.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/)[1]);
-          const table = json.table;
-          const headers = table.cols.map(c => (c.label || '').toLowerCase().trim());
-
-          function colIdx(keywords) {
-            return headers.findIndex(h => keywords.some(k => h.includes(k)));
-          }
-
-          const iTitle    = 0;
-          const iNormal   = colIdx(['normal']);
-          const iPremium  = colIdx(['premium']);
-          const iPlatform = colIdx(['platform']);
-          const iUrl      = 4; // column E
-          const iCover    = colIdx(['cover']);
-
-          function val(row, i) {
-            if (i < 0 || !row.c || !row.c[i]) return '';
-            const v = row.c[i].v;
-            return v !== null && v !== undefined ? String(v) : '';
-          }
-
-          const games = table.rows
-            .filter(row => row.c && row.c[iTitle] && row.c[iTitle].v)
-            .map(row => ({
-              title:    val(row, iTitle).trim(),
-              normal:   parseFloat(val(row, iNormal)) || null,
-              premium:  parseFloat(val(row, iPremium)) || null,
-              platform: val(row, iPlatform).trim(),
-              url:      val(row, iUrl).trim(),
-              cover:    val(row, iCover).trim(),
-            }));
-
-          resolve(games);
-        } catch(e) { reject(e); }
-      });
+      res.on('end', () => resolve(data));
     }).on('error', reject);
   });
 }
 
+async function fetchSheetTab(tabName, type) {
+  const url  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(tabName)}`;
+  const text = await httpGet(url);
+  const json = JSON.parse(text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/)[1]);
+  if (json.status === 'error') throw new Error(`Sheet error: ${tabName}`);
+  const table = json.table;
+
+  let rows    = table.rows;
+  let headers = table.cols.map(c => (c.label || '').toLowerCase().trim());
+  if (headers.join('') === '' && rows.length) {
+    headers = (rows[0].c || []).map(c => c && c.v != null ? String(c.v).toLowerCase().trim() : '');
+    rows = rows.slice(1);
+  }
+
+  const colIdx = keywords => headers.findIndex(h => keywords.some(k => h.includes(k)));
+
+  const idx = {
+    title:    colIdx(['game title', 'title', 'game name', 'game', 'name']),
+    normal:   colIdx(['normal']),
+    premium:  colIdx(['premium']),
+    price:    colIdx(['price', 'cost', 'amount']),
+    platform: colIdx(['platform']),
+    url:      URL_COL,
+    eshop:    ESHOP_COL,
+    cover:    colIdx(['cover url', 'cover image', 'cover', 'image url', 'image', 'thumbnail']),
+  };
+  if (idx.cover < 0) idx.cover = COVER_COL;
+
+  const val = (row, i) => {
+    if (i < 0 || !row.c || !row.c[i]) return '';
+    const v = row.c[i].v;
+    return v !== null && v !== undefined ? String(v) : '';
+  };
+  const toPrice = v => {
+    const n = parseFloat(String(v).replace(/[^0-9.]/g, ''));
+    return isNaN(n) ? null : n;
+  };
+  const rowCover = row => {
+    const v = val(row, idx.cover).trim();
+    if (/^https?:\/\//i.test(v)) return v;
+    const cells = row.c || [];
+    for (let i = 0; i < cells.length; i++) {
+      if (i === idx.url || i === idx.title) continue;
+      const s = cells[i] && cells[i].v != null ? String(cells[i].v).trim() : '';
+      if (IMG_URL_RE.test(s) || IMG_HOST_RE.test(s)) return s;
+    }
+    return '';
+  };
+
+  return rows
+    .filter(row => row.c && idx.title >= 0 && row.c[idx.title] && row.c[idx.title].v)
+    .map(row => ({
+      title:        val(row, idx.title).trim(),
+      normalPrice:  toPrice(val(row, idx.normal)),
+      premiumPrice: toPrice(val(row, idx.premium)),
+      codePrice:    toPrice(val(row, idx.price)),
+      platform:     val(row, idx.platform).trim(),
+      storeUrl:     val(row, idx.url).trim(),
+      eshopTitle:   val(row, idx.eshop).trim(),
+      coverUrl:     rowCover(row),
+      type,
+    }))
+    .filter(g => g.title.length > 0);
+}
+
+// In-memory catalog cache with stale-while-revalidate: requests are served
+// instantly from cache; a background refresh runs when it's older than 5 min.
+let catalogCache = null;
+let catalogTime  = 0;
+let refreshing   = null;
+const CATALOG_TTL = 5 * 60 * 1000;
+
+function refreshCatalog() {
+  if (refreshing) return refreshing;
+  refreshing = Promise.allSettled(SHEET_TABS.map(s => fetchSheetTab(s.tab, s.type)))
+    .then(results => {
+      const games = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+      const errs  = results.filter(r => r.status === 'rejected').map(r => r.reason.message);
+      if (errs.length) console.warn('Sheet errors:', errs.join(' | '));
+      if (games.length || !catalogCache) {
+        catalogCache = games;
+        catalogTime  = Date.now();
+      }
+      return catalogCache;
+    })
+    .finally(() => { refreshing = null; });
+  return refreshing;
+}
+
+async function getCatalog() {
+  if (!catalogCache) return refreshCatalog();
+  if (Date.now() - catalogTime > CATALOG_TTL) refreshCatalog(); // refresh in background
+  return catalogCache;
+}
+
 async function getGames() {
-  if (gamesCache && Date.now() - gamesCacheTime < 5 * 60 * 1000) return gamesCache;
-  gamesCache     = await fetchSheet();
-  gamesCacheTime = Date.now();
-  return gamesCache;
+  const catalog = await getCatalog();
+  return catalog.map(g => ({
+    title:    g.title,
+    normal:   g.normalPrice !== null ? g.normalPrice : g.codePrice,
+    premium:  g.premiumPrice,
+    platform: g.platform,
+    url:      g.storeUrl,
+    cover:    g.coverUrl,
+  }));
+}
+
+// ── Public JSON API for the website ───────────────────────────────────────────
+app.get('/api/games', async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  try {
+    const games = await getCatalog();
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json({ ts: catalogTime, games });
+  } catch (err) {
+    console.error('API error:', err);
+    res.status(502).json({ error: 'Could not load catalog' });
+  }
+});
+
+// Warm the cache on boot and keep the Render instance awake (free tier spins
+// down after 15 min idle, which would add a ~30s cold start for visitors).
+refreshCatalog().catch(() => {});
+if (WEBHOOK_URL) {
+  setInterval(() => {
+    https.get(WEBHOOK_URL, () => {}).on('error', () => {});
+    getCatalog().catch(() => {});
+  }, 10 * 60 * 1000);
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
