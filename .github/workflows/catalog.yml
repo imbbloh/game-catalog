@@ -34,5 +34,9 @@ jobs:
             echo "games.json unchanged — nothing to commit"
           else
             git commit -m "Update games.json snapshot"
-            git push
+            for i in 1 2 3; do
+              if git push; then break; fi
+              echo "push rejected — rebasing and retrying ($i/3)"
+              git pull --rebase origin main
+            done
           fi

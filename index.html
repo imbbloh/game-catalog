@@ -773,8 +773,11 @@ function firstSuccess(promises) {
 }
 
 // ── "Raw Data" tab — primary cover art source ───────────────────────────────
-// Column A = game title, column I (index 8) = cover URL.
+// Headers: Timestamp, Game Title, ..., Cover URL — title is column B
+// (index 1), cover is column I (index 8).
 var RAW_TAB = 'Raw Data';
+var RAW_TITLE_COL = 1;
+var RAW_COVER_COL = 8;
 
 function normTitle(t) {
   return String(t).toLowerCase().replace(/[™®©]/g, '').replace(/\s+/g, ' ').trim();
@@ -789,11 +792,16 @@ function loadRawCovers() {
       if (!m) return {};
       var data = JSON.parse(m[1]);
       if (data.status === 'error' || !data.table) return {};
+      var labels = data.table.cols.map(function(c) { return (c.label || '').toLowerCase().trim(); });
+      var iTitle = labels.findIndex(function(h) { return h.indexOf('game title') !== -1 || h === 'title'; });
+      var iCover = labels.findIndex(function(h) { return h.indexOf('cover') !== -1; });
+      if (iTitle < 0) iTitle = RAW_TITLE_COL;
+      if (iCover < 0) iCover = RAW_COVER_COL;
       var covers = {};
       data.table.rows.forEach(function(row) {
         var c     = row.c || [];
-        var key   = (c[0] && c[0].v !== null && c[0].v !== undefined) ? String(c[0].v) : '';
-        var cover = (c[8] && c[8].v !== null && c[8].v !== undefined) ? String(c[8].v).trim() : '';
+        var key   = (c[iTitle] && c[iTitle].v !== null && c[iTitle].v !== undefined) ? String(c[iTitle].v) : '';
+        var cover = (c[iCover] && c[iCover].v !== null && c[iCover].v !== undefined) ? String(c[iCover].v).trim() : '';
         if (key && /^https?:\/\//i.test(cover)) covers[normTitle(key)] = cover;
       });
       return covers;

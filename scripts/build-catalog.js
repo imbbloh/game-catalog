@@ -86,9 +86,12 @@ async function fetchTab(tabName, type) {
     .filter(g => g.title.length > 0);
 }
 
-// "Raw Data" tab: primary source of cover art. Column A = game title,
-// column I (index 8) = cover URL. Matched to games by normalized title.
+// "Raw Data" tab: primary source of cover art. Headers are
+// Timestamp, Game Title, ..., Cover URL — so title is column B (index 1)
+// and cover is column I (index 8). Matched to games by normalized title.
 const RAW_TAB = 'Raw Data';
+const RAW_TITLE_COL = 1;
+const RAW_COVER_COL = 8;
 
 const normTitle = t => String(t).toLowerCase().replace(/[™®©]/g, '').replace(/\s+/g, ' ').trim();
 
@@ -100,14 +103,20 @@ async function fetchRawCovers() {
   const json = JSON.parse(text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/)[1]);
   if (json.status === 'error') throw new Error(`Sheet error: ${RAW_TAB}`);
 
-  const labels = json.table.cols.map(c => (c.label || '').trim());
+  const labels = json.table.cols.map(c => (c.label || '').toLowerCase().trim());
   console.log(`${RAW_TAB} headers:`, JSON.stringify(labels));
+
+  // Prefer header detection; fall back to the known fixed positions
+  let iTitle = labels.findIndex(h => h.includes('game title') || h === 'title');
+  let iCover = labels.findIndex(h => h.includes('cover'));
+  if (iTitle < 0) iTitle = RAW_TITLE_COL;
+  if (iCover < 0) iCover = RAW_COVER_COL;
 
   const covers = {};
   json.table.rows.forEach(row => {
     const c = row.c || [];
-    const key   = c[0] && c[0].v != null ? String(c[0].v) : '';
-    const cover = c[8] && c[8].v != null ? String(c[8].v).trim() : '';
+    const key   = c[iTitle] && c[iTitle].v != null ? String(c[iTitle].v) : '';
+    const cover = c[iCover] && c[iCover].v != null ? String(c[iCover].v).trim() : '';
     if (key && /^https?:\/\//i.test(cover)) covers[normTitle(key)] = cover;
   });
   console.log(`${RAW_TAB}: ${Object.keys(covers).length} cover URLs`);
