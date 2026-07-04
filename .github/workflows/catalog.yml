@@ -30,13 +30,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add games.json
-          if git diff --cached --quiet; then
-            echo "games.json unchanged — nothing to commit"
-          else
+          # games.json is generated, so never merge it: if the push races
+          # with another run, reset to the remote and regenerate instead.
+          for i in 1 2 3; do
+            git add games.json
+            if git diff --cached --quiet; then
+              echo "games.json unchanged — nothing to commit"
+              break
+            fi
             git commit -m "Update games.json snapshot"
-            for i in 1 2 3; do
-              if git push; then break; fi
-              echo "push rejected — rebasing and retrying ($i/3)"
-              git pull --rebase origin main
-            done
-          fi
+            if git push; then break; fi
+            echo "push rejected — resetting to origin and regenerating ($i/3)"
+            git fetch origin main
+            git reset --hard origin/main
+            node scripts/build-catalog.js
+          done
