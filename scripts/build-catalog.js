@@ -86,11 +86,50 @@ async function fetchTab(tabName, type) {
     .filter(g => g.title.length > 0);
 }
 
+// "Raw Data" tab: primary source of cover art. Column A = game title,
+// column I (index 8) = cover URL. Matched to games by normalized title.
+const RAW_TAB = 'Raw Data';
+
+const normTitle = t => String(t).toLowerCase().replace(/[™®©]/g, '').replace(/\s+/g, ' ').trim();
+
+async function fetchRawCovers() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(RAW_TAB)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${RAW_TAB}`);
+  const text = await res.text();
+  const json = JSON.parse(text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/)[1]);
+  if (json.status === 'error') throw new Error(`Sheet error: ${RAW_TAB}`);
+
+  const labels = json.table.cols.map(c => (c.label || '').trim());
+  console.log(`${RAW_TAB} headers:`, JSON.stringify(labels));
+
+  const covers = {};
+  json.table.rows.forEach(row => {
+    const c = row.c || [];
+    const key   = c[0] && c[0].v != null ? String(c[0].v) : '';
+    const cover = c[8] && c[8].v != null ? String(c[8].v).trim() : '';
+    if (key && /^https?:\/\//i.test(cover)) covers[normTitle(key)] = cover;
+  });
+  console.log(`${RAW_TAB}: ${Object.keys(covers).length} cover URLs`);
+  return covers;
+}
+
 (async () => {
-  const results = await Promise.allSettled(SHEET_TABS.map(s => fetchTab(s.tab, s.type)));
+  const [results, rawResult] = await Promise.all([
+    Promise.allSettled(SHEET_TABS.map(s => fetchTab(s.tab, s.type))),
+    fetchRawCovers().catch(err => { console.warn('Raw Data error:', err.message); return {}; }),
+  ]);
   const games = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
   const errs  = results.filter(r => r.status === 'rejected').map(r => r.reason.message);
   if (errs.length) console.warn('Sheet errors:', errs.join(' | '));
+
+  // Raw Data covers take priority; per-tab column I stays as fallback
+  let rawHits = 0;
+  games.forEach(g => {
+    const c = rawResult[normTitle(g.title)] || rawResult[normTitle(g.eshopTitle)];
+    if (c) { g.coverUrl = c; rawHits++; }
+  });
+  console.log(`Covers from ${RAW_TAB}: ${rawHits}/${games.length} games`);
   if (!games.length) {
     console.error('No games parsed — refusing to write an empty games.json');
     process.exit(1);

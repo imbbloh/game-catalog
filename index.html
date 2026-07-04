@@ -772,17 +772,51 @@ function firstSuccess(promises) {
   });
 }
 
+// ── "Raw Data" tab — primary cover art source ───────────────────────────────
+// Column A = game title, column I (index 8) = cover URL.
+var RAW_TAB = 'Raw Data';
+
+function normTitle(t) {
+  return String(t).toLowerCase().replace(/[™®©]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function loadRawCovers() {
+  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(RAW_TAB);
+  return fetch(url)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      var m = text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/);
+      if (!m) return {};
+      var data = JSON.parse(m[1]);
+      if (data.status === 'error' || !data.table) return {};
+      var covers = {};
+      data.table.rows.forEach(function(row) {
+        var c     = row.c || [];
+        var key   = (c[0] && c[0].v !== null && c[0].v !== undefined) ? String(c[0].v) : '';
+        var cover = (c[8] && c[8].v !== null && c[8].v !== undefined) ? String(c[8].v).trim() : '';
+        if (key && /^https?:\/\//i.test(cover)) covers[normTitle(key)] = cover;
+      });
+      return covers;
+    })
+    .catch(function() { return {}; });
+}
+
 // ── Load all three sheets in parallel ──────────────────────────────────────
 function loadAll() {
-  return Promise.allSettled(
-    SHEETS.map(function(s) {
-      return loadSheet(s.tab).then(function(games) {
-        return games.map(function(g) {
-          return Object.assign({}, g, { type: s.type });
+  return Promise.all([
+    Promise.allSettled(
+      SHEETS.map(function(s) {
+        return loadSheet(s.tab).then(function(games) {
+          return games.map(function(g) {
+            return Object.assign({}, g, { type: s.type });
+          });
         });
-      });
-    })
-  ).then(function(results) {
+      })
+    ),
+    loadRawCovers(),
+  ]).then(function(res) {
+    var results   = res[0];
+    var rawCovers = res[1];
     var all = [];
     var errs = [];
     results.forEach(function(r, i) {
@@ -793,6 +827,11 @@ function loadAll() {
       }
     });
     if (errs.length) console.warn('Sheet errors:', errs.join(' | '));
+    // Raw Data covers take priority; per-tab column I stays as fallback
+    all.forEach(function(g) {
+      var c = rawCovers[normTitle(g.title)] || rawCovers[normTitle(g.eshopTitle)];
+      if (c) g.coverUrl = c;
+    });
     return all;
   });
 }
