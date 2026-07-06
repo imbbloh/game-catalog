@@ -123,10 +123,44 @@ async function fetchRawCovers() {
   return covers;
 }
 
+// "Raw Data - Digital Codes" tab: store links for code-type games.
+// Column C (index 2) = game title, column F (index 5) = eShop URL.
+const RAW_CODES_TAB = 'Raw Data - Digital Codes';
+const RAW_CODES_TITLE_COL = 2;
+const RAW_CODES_URL_COL   = 5;
+
+async function fetchRawCodeUrls() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(RAW_CODES_TAB)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${RAW_CODES_TAB}`);
+  const text = await res.text();
+  const json = JSON.parse(text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/)[1]);
+  if (json.status === 'error') throw new Error(`Sheet error: ${RAW_CODES_TAB}`);
+
+  const labels = json.table.cols.map(c => (c.label || '').toLowerCase().trim());
+  console.log(`${RAW_CODES_TAB} headers:`, JSON.stringify(labels));
+
+  let iTitle = labels.findIndex(h => h.includes('game title') || h === 'title');
+  let iUrl   = labels.findIndex(h => h.includes('eshop url') || h.includes('url'));
+  if (iTitle < 0) iTitle = RAW_CODES_TITLE_COL;
+  if (iUrl < 0)   iUrl   = RAW_CODES_URL_COL;
+
+  const urls = {};
+  json.table.rows.forEach(row => {
+    const c = row.c || [];
+    const key = c[iTitle] && c[iTitle].v != null ? String(c[iTitle].v) : '';
+    const u   = c[iUrl]   && c[iUrl].v   != null ? String(c[iUrl].v).trim() : '';
+    if (key && /^https?:\/\//i.test(u)) urls[normTitle(key)] = u;
+  });
+  console.log(`${RAW_CODES_TAB}: ${Object.keys(urls).length} store URLs`);
+  return urls;
+}
+
 (async () => {
-  const [results, rawResult] = await Promise.all([
+  const [results, rawResult, rawCodeUrls] = await Promise.all([
     Promise.allSettled(SHEET_TABS.map(s => fetchTab(s.tab, s.type))),
     fetchRawCovers().catch(err => { console.warn('Raw Data error:', err.message); return {}; }),
+    fetchRawCodeUrls().catch(err => { console.warn('Raw Data - Digital Codes error:', err.message); return {}; }),
   ]);
   const games = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
   const errs  = results.filter(r => r.status === 'rejected').map(r => r.reason.message);
@@ -139,6 +173,15 @@ async function fetchRawCovers() {
     if (c) { g.coverUrl = c; rawHits++; }
   });
   console.log(`Covers from ${RAW_TAB}: ${rawHits}/${games.length} games`);
+
+  // Digital Codes store links come from Raw Data - Digital Codes
+  let codeHits = 0;
+  games.forEach(g => {
+    if (g.type !== 'code') return;
+    const u = rawCodeUrls[normTitle(g.title)] || rawCodeUrls[normTitle(g.eshopTitle)];
+    if (u) { g.storeUrl = u; codeHits++; }
+  });
+  console.log(`Store URLs from ${RAW_CODES_TAB}: ${codeHits}/${games.filter(g => g.type === 'code').length} code games`);
   if (!games.length) {
     console.error('No games parsed — refusing to write an empty games.json');
     process.exit(1);

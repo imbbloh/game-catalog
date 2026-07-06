@@ -809,6 +809,36 @@ function loadRawCovers() {
     .catch(function() { return {}; });
 }
 
+// ── "Raw Data - Digital Codes" tab — store links for code games ──────────────
+// Column C (index 2) = game title, column F (index 5) = eShop URL.
+var RAW_CODES_TAB = 'Raw Data - Digital Codes';
+
+function loadRawCodeUrls() {
+  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(RAW_CODES_TAB);
+  return fetch(url)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      var m = text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/);
+      if (!m) return {};
+      var data = JSON.parse(m[1]);
+      if (data.status === 'error' || !data.table) return {};
+      var labels = data.table.cols.map(function(c) { return (c.label || '').toLowerCase().trim(); });
+      var iTitle = labels.findIndex(function(h) { return h.indexOf('game title') !== -1 || h === 'title'; });
+      var iUrl   = labels.findIndex(function(h) { return h.indexOf('eshop url') !== -1 || h.indexOf('url') !== -1; });
+      if (iTitle < 0) iTitle = 2;
+      if (iUrl < 0)   iUrl   = 5;
+      var urls = {};
+      data.table.rows.forEach(function(row) {
+        var c   = row.c || [];
+        var key = (c[iTitle] && c[iTitle].v !== null && c[iTitle].v !== undefined) ? String(c[iTitle].v) : '';
+        var u   = (c[iUrl]   && c[iUrl].v   !== null && c[iUrl].v   !== undefined) ? String(c[iUrl].v).trim() : '';
+        if (key && /^https?:\/\//i.test(u)) urls[normTitle(key)] = u;
+      });
+      return urls;
+    })
+    .catch(function() { return {}; });
+}
+
 // ── Load all three sheets in parallel ──────────────────────────────────────
 function loadAll() {
   return Promise.all([
@@ -822,9 +852,11 @@ function loadAll() {
       })
     ),
     loadRawCovers(),
+    loadRawCodeUrls(),
   ]).then(function(res) {
-    var results   = res[0];
-    var rawCovers = res[1];
+    var results     = res[0];
+    var rawCovers   = res[1];
+    var rawCodeUrls = res[2];
     var all = [];
     var errs = [];
     results.forEach(function(r, i) {
@@ -839,6 +871,10 @@ function loadAll() {
     all.forEach(function(g) {
       var c = rawCovers[normTitle(g.title)] || rawCovers[normTitle(g.eshopTitle)];
       if (c) g.coverUrl = c;
+      if (g.type === 'code') {
+        var u = rawCodeUrls[normTitle(g.title)] || rawCodeUrls[normTitle(g.eshopTitle)];
+        if (u) g.storeUrl = u;
+      }
     });
     return all;
   });
