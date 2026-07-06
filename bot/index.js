@@ -206,21 +206,23 @@ bot.onText(/\/(start|help)/i, (msg) => {
   bot.sendMessage(msg.chat.id, helpText(), { parse_mode: 'HTML' });
 });
 
-bot.onText(/\/pricelist(?:\s+(.+))?/i, async (msg, match) => {
-  const chatId  = msg.chat.id;
-  const filter  = (match[1] || '').trim().toLowerCase();
+bot.onText(/\/pricelist$/i, (msg) => {
+  bot.sendMessage(msg.chat.id,
+    `🗂 <b>Full Game Catalog</b>\n\nBrowse all games with prices and cover art:\n\n🔗 <a href="${CATALOG_URL}">${CATALOG_URL}</a>\n\n`
+    + `💡 Tip: Use <code>/list switch</code> or <code>/list ps5</code> to filter by platform here.`,
+    { parse_mode: 'HTML', disable_web_page_preview: false }
+  );
+});
 
-  // No filter → send web catalog link
+bot.onText(/\/list(?:\s+(.+))?/i, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const filter = (match[1] || '').trim().toLowerCase();
+
   if (!filter) {
-    bot.sendMessage(chatId,
-      `🗂 <b>Full Game Catalog</b>\n\nBrowse all games with prices and cover art:\n\n🔗 <a href="${CATALOG_URL}">${CATALOG_URL}</a>\n\n`
-      + `💡 Tip: Use <code>/pricelist switch</code> or <code>/pricelist ps5</code> to filter by platform here.`,
-      { parse_mode: 'HTML', disable_web_page_preview: false }
-    );
+    bot.sendMessage(chatId, '💡 Please specify a platform. E.g. <code>/list switch</code>, <code>/list switch2</code>, <code>/list ps5</code>', { parse_mode: 'HTML' });
     return;
   }
 
-  // Filter by platform
   try {
     const games    = await getGames();
     const filtered = platformFilter(games, filter);
@@ -230,7 +232,6 @@ bot.onText(/\/pricelist(?:\s+(.+))?/i, async (msg, match) => {
       return;
     }
 
-    // Sort A-Z then paginate
     filtered.sort((a, b) => a.title.localeCompare(b.title));
     sendListPage(chatId, filtered, filter, 0);
   } catch(e) {
@@ -394,13 +395,13 @@ function helpText() {
     + 'Search for a game price\n\n'
     + '<code>/pricelist</code>\n'
     + 'Browse full catalog on web\n\n'
-    + '<code>/pricelist &lt;platform&gt;</code>\n'
-    + 'Filter by platform (e.g. /pricelist switch, /pricelist ps5)\n\n'
+    + '<code>/list &lt;platform&gt;</code>\n'
+    + 'Filter by platform (e.g. /list switch, /list ps5)\n\n'
     + '<b>Examples:</b>\n'
     + '• /price Zelda\n'
     + '• /price Mario Kart\n'
-    + '• /pricelist switch\n'
-    + '• /pricelist ps5\n\n'
+    + '• /list switch\n'
+    + '• /list ps5\n\n'
     + "You don't need the exact title — keywords work!\n\n"
     + 'Each result shows:\n'
     + '🖼 Cover art\n'
