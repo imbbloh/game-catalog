@@ -198,10 +198,70 @@ function searchGames(games, query) {
   return results.sort((a, b) => b.score - a.score);
 }
 
+const CATALOG_URL = 'https://imbbloh.github.io/game-catalog/';
+
 // ── Bot commands ──────────────────────────────────────────────────────────────
 bot.onText(/\/(start|help)/i, (msg) => {
   bot.sendMessage(msg.chat.id, helpText(), { parse_mode: 'HTML' });
 });
+
+bot.onText(/\/list(?:\s+(.+))?/i, async (msg, match) => {
+  const chatId  = msg.chat.id;
+  const filter  = (match[1] || '').trim().toLowerCase();
+
+  // No filter → send web catalog link
+  if (!filter) {
+    bot.sendMessage(chatId,
+      `🗂 <b>Full Game Catalog</b>\n\nBrowse all games with prices and cover art:\n\n🔗 <a href="${CATALOG_URL}">${CATALOG_URL}</a>\n\n`
+      + `💡 Tip: Use <code>/list switch</code> or <code>/list ps5</code> to filter by platform here.`,
+      { parse_mode: 'HTML', disable_web_page_preview: false }
+    );
+    return;
+  }
+
+  // Filter by platform
+  try {
+    const games    = await getGames();
+    const filtered = games.filter(g => g.platform && g.platform.toLowerCase().includes(filter));
+
+    if (!filtered.length) {
+      bot.sendMessage(chatId, `❌ No games found for platform "<b>${esc(filter)}</b>".`, { parse_mode: 'HTML' });
+      return;
+    }
+
+    // Paginate — show page 1
+    sendListPage(chatId, filtered, filter, 0);
+  } catch(e) {
+    console.error('List error:', e);
+    bot.sendMessage(chatId, '❌ Something went wrong. Please try again.');
+  }
+});
+
+function sendListPage(chatId, games, filter, page) {
+  const PAGE_SIZE = 10;
+  const start     = page * PAGE_SIZE;
+  const slice     = games.slice(start, start + PAGE_SIZE);
+  const total     = games.length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  let text = `🕹 <b>${esc(filter.toUpperCase())} Games</b> (${total} total) — Page ${page + 1}/${totalPages}\n\n`;
+  slice.forEach((g, i) => {
+    const normal  = g.normalPrice  ? `$${g.normalPrice.toFixed(2)}`  : (g.normal  ? `$${g.normal.toFixed(2)}`  : 'N/A');
+    const premium = g.premiumPrice ? `$${g.premiumPrice.toFixed(2)}` : (g.premium ? `$${g.premium.toFixed(2)}` : 'N/A');
+    text += `${start + i + 1}. <b>${esc(g.title)}</b>\n`;
+    text += `   💰 ${normal} · ⭐ ${premium}\n`;
+  });
+
+  // Navigation buttons
+  const navRow = [];
+  if (page > 0)               navRow.push({ text: '◀ Prev', callback_data: `list:${filter}:${page - 1}` });
+  if (page < totalPages - 1)  navRow.push({ text: 'Next ▶', callback_data: `list:${filter}:${page + 1}` });
+
+  const opts = { parse_mode: 'HTML' };
+  if (navRow.length) opts.reply_markup = { inline_keyboard: [navRow] };
+
+  bot.sendMessage(chatId, text, opts);
+}
 
 bot.onText(/\/price(?:\s+(.+))?/i, async (msg, match) => {
   const chatId = msg.chat.id;
@@ -254,6 +314,19 @@ bot.on('callback_query', async (cbq) => {
   const chatId = cbq.message.chat.id;
   const data   = cbq.data || '';
 
+  if (data.startsWith('list:')) {
+    const parts  = data.split(':');
+    const filter = parts[1];
+    const page   = parseInt(parts[2], 10) || 0;
+    try {
+      const games    = await getGames();
+      const filtered = games.filter(g => g.platform && g.platform.toLowerCase().includes(filter));
+      if (filtered.length) sendListPage(chatId, filtered, filter, page);
+    } catch(e) { console.error('List callback error:', e); }
+    bot.answerCallbackQuery(cbq.id).catch(() => {});
+    return;
+  }
+
   if (data.startsWith('pick:')) {
     const parts = data.split(':');
     const idx   = parseInt(parts[1], 10);
@@ -304,17 +377,23 @@ function esc(t) {
 
 function helpText() {
   return '👋 <b>Game Price Bot</b>\n\n'
-    + 'Search for game prices:\n\n'
-    + '<code>/price &lt;game title&gt;</code>\n\n'
+    + '<b>Commands:</b>\n\n'
+    + '<code>/price &lt;game title&gt;</code>\n'
+    + 'Search for a game price\n\n'
+    + '<code>/list</code>\n'
+    + 'Browse full catalog on web\n\n'
+    + '<code>/list &lt;platform&gt;</code>\n'
+    + 'Filter by platform (e.g. /list switch, /list ps5)\n\n'
     + '<b>Examples:</b>\n'
     + '• /price Zelda\n'
     + '• /price Mario Kart\n'
-    + '• /price bananza\n\n'
+    + '• /list switch\n'
+    + '• /list ps5\n\n'
     + "You don't need the exact title — keywords work!\n\n"
     + 'Each result shows:\n'
     + '🖼 Cover art\n'
     + '💰 Normal &amp; Premium prices\n'
-    + '🏪 eShop link\n'
+    + '🏪 Store link\n'
     + '🛒 Carousell listing';
 }
 
