@@ -9,7 +9,7 @@ const fs = require('fs');
 const SHEET_ID  = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
 const TAB       = 'Raw Data - Digital Codes';
 const TITLE_COL = 2; // column C
-const CONCURRENCY = 6;
+const CONCURRENCY = 2; // gentle: nintendo.com rate-limits aggressive crawling
 
 // Base cleanup: lowercase, drop accents (é→e), trademark marks, apostrophes,
 // and the "(Switch 2 Edition)" marker — mirrors the column F sheet formula.
@@ -59,32 +59,60 @@ function formulaUrl(title) {
   return `https://www.nintendo.com/us/store/products/${formulaSlug(title)}${suf}`;
 }
 
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// true = page exists, false = definitive 404, 'blocked' = rate-limited
 async function urlOk(url) {
-  try {
-    const res = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-    });
-    // Nintendo 404 pages return 404; a good product page returns 200
-    return res.status === 200 ? res.url : null;
-  } catch (e) {
-    return null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        redirect: 'follow',
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      });
+      await sleep(250); // pace requests
+      if (res.status === 200) return true;
+      if (res.status === 403 || res.status === 429) {
+        console.log(`  rate-limited (${res.status}) on ${url} — backing off`);
+        await sleep(3000 * attempt);
+        continue;
+      }
+      return false; // 404 etc — definitive
+    } catch (e) {
+      await sleep(1000 * attempt);
+    }
   }
+  return 'blocked';
 }
 
 async function resolveTitle(title) {
   const fUrl = formulaUrl(title);
+  let blocked = false;
   for (const url of candidates(title)) {
     const ok = await urlOk(url);
+    if (ok === 'blocked') { blocked = true; continue; }
     if (ok) {
       return url === fUrl
         ? { url, status: 'verified' }
         : { url, status: 'verified — DIFFERS from formula, paste this into F' };
     }
   }
-  // Nothing verified — still emit the best guess, but flag it
+  if (blocked) return { url: fUrl, status: 'rate-limited — rerun workflow later' };
   return { url: fUrl, status: 'NOT FOUND — check manually' };
+}
+
+// Reuse verified results from a previous run so reruns only hit unresolved rows
+function loadPrevious() {
+  const prev = {};
+  try {
+    const lines = fs.readFileSync('eshop-urls.csv', 'utf8').split('\n').slice(1);
+    const split = line => line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(f => f.replace(/^"|"$/g, '').replace(/""/g, '"'));
+    lines.filter(Boolean).forEach(line => {
+      const [, title, url, status] = split(line);
+      if (title && status && status.startsWith('verified')) prev[title] = { url, status };
+    });
+  } catch (e) {}
+  return prev;
 }
 
 (async () => {
@@ -107,6 +135,9 @@ async function resolveTitle(title) {
   });
   console.log(`${rows.length} rows, ${rows.filter(Boolean).length} titles`);
 
+  const previous = loadPrevious();
+  console.log(`${Object.keys(previous).length} titles already verified in previous CSV`);
+
   const results = new Array(rows.length).fill(null);
   const cache = {}; // duplicate titles resolve once
   let cursor = 0;
@@ -116,6 +147,7 @@ async function resolveTitle(title) {
       const i = cursor++;
       const title = rows[i];
       if (!title) { results[i] = { url: '', status: '' }; continue; }
+      if (previous[title]) { results[i] = previous[title]; continue; }
       if (!cache[title]) cache[title] = resolveTitle(title);
       results[i] = await cache[title];
       console.log(`[${i + 1}/${rows.length}] ${title} → ${results[i].status}`);
@@ -131,7 +163,8 @@ async function resolveTitle(title) {
   });
   fs.writeFileSync('eshop-urls.csv', lines.join('\n') + '\n');
 
-  const verified = results.filter(r => r && r.status === 'verified').length;
+  const verified = results.filter(r => r && r.status.startsWith('verified')).length;
   const missing  = results.filter(r => r && r.status.startsWith('NOT FOUND')).length;
-  console.log(`\nWrote eshop-urls.csv: ${verified} verified, ${missing} not found`);
+  const limited  = results.filter(r => r && r.status.startsWith('rate-limited')).length;
+  console.log(`\nWrote eshop-urls.csv: ${verified} verified, ${missing} not found, ${limited} rate-limited`);
 })().catch(err => { console.error(err); process.exit(1); });
