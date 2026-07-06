@@ -11,24 +11,52 @@ const TAB       = 'Raw Data - Digital Codes';
 const TITLE_COL = 2; // column C
 const CONCURRENCY = 6;
 
-function slugify(title) {
+// Base cleanup: lowercase, drop accents (é→e), trademark marks, apostrophes,
+// and the "(Switch 2 Edition)" marker — mirrors the column F sheet formula.
+function clean(title) {
   return String(title)
     .toLowerCase()
-    .replace(/[™®©]/g, '')
-    .replace(/\(switch 2 edition\)/g, '')
-    .replace(/&/g, ' and ')
-    .replace(/\+/g, ' ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[™®©'’]/g, '')
+    .replace(/\(switch 2 edition\)/g, '');
+}
+
+function hyphenate(s) {
+  return s.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+// The slug the sheet formula produces — first candidate tried.
+function formulaSlug(title) {
+  return hyphenate(clean(title));
+}
+
+// Alternate slugs Nintendo actually uses for some titles.
+function slugVariants(title) {
+  const c = clean(title);
+  const variants = [
+    hyphenate(c),
+    hyphenate(c.replace(/&/g, ' and ').replace(/\+/g, ' ')),
+    hyphenate(c.replace(/&/g, ' and ').replace(/\+/g, ' plus ')),
+    hyphenate(c.replace(/\([^)]*\)/g, ' ')), // drop "(DLC)", "(Upgrade Pack)", …
+    hyphenate(c.replace(/\([^)]*\)/g, ' ').replace(/&/g, ' and ').replace(/\+/g, ' plus ')),
+  ];
+  return [...new Set(variants)].filter(Boolean);
 }
 
 function candidates(title) {
-  const slug = slugify(title);
   const isSwitch2 = /switch\s*2/i.test(title);
-  const list = isSwitch2
-    ? [`${slug}-switch-2/`, `${slug}-switch/`, `${slug}/`]
-    : [`${slug}-switch/`, `${slug}-switch-2/`, `${slug}/`];
-  return list.map(p => `https://www.nintendo.com/us/store/products/${p}`);
+  const suffixes = isSwitch2 ? ['-switch-2/', '-switch/', '/'] : ['-switch/', '-switch-2/', '/'];
+  const urls = [];
+  slugVariants(title).forEach(slug => {
+    suffixes.forEach(suf => urls.push(`https://www.nintendo.com/us/store/products/${slug}${suf}`));
+  });
+  return [...new Set(urls)];
+}
+
+// What the sheet formula would emit for this title (to compare against).
+function formulaUrl(title) {
+  const suf = /switch\s*2/i.test(title) ? '-switch-2/' : '-switch/';
+  return `https://www.nintendo.com/us/store/products/${formulaSlug(title)}${suf}`;
 }
 
 async function urlOk(url) {
@@ -46,12 +74,17 @@ async function urlOk(url) {
 }
 
 async function resolveTitle(title) {
+  const fUrl = formulaUrl(title);
   for (const url of candidates(title)) {
     const ok = await urlOk(url);
-    if (ok) return { url, status: 'verified' };
+    if (ok) {
+      return url === fUrl
+        ? { url, status: 'verified' }
+        : { url, status: 'verified — DIFFERS from formula, paste this into F' };
+    }
   }
   // Nothing verified — still emit the best guess, but flag it
-  return { url: candidates(title)[0], status: 'NOT FOUND — check manually' };
+  return { url: fUrl, status: 'NOT FOUND — check manually' };
 }
 
 (async () => {
