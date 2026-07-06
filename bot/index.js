@@ -238,7 +238,7 @@ bot.onText(/\/list(?:\s+(.+))?/i, async (msg, match) => {
 });
 
 function sendListPage(chatId, games, filter, page) {
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 50;
   const start     = page * PAGE_SIZE;
   const slice     = games.slice(start, start + PAGE_SIZE);
   const total     = games.length;
