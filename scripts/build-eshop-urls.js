@@ -113,7 +113,17 @@ async function listIndexes(creds) {
     });
     if (!res.ok) { console.log(`  algolia listIndexes: HTTP ${res.status}`); return []; }
     const d = await res.json();
-    return (d.items || []).map(i => i.name).filter(n => /store|product|game/i.test(n));
+    // Prefer real US-storefront indexes; skip testing/dev copies, sort
+    // replicas (_asc/_des), and other locales (en_ca, en_gb, …)
+    const names = (d.items || []).map(i => i.name)
+      .filter(n => /store|product|game/i.test(n))
+      .filter(n => !/testing|dev|staging|_asc|_des|price|release/i.test(n));
+    const ordered = [
+      ...names.filter(n => n === 'store_all_products'),
+      ...names.filter(n => /en_us/i.test(n)),
+      ...names.filter(n => !/en_[a-z]{2}|_ca\b|_gb\b|_mx\b|_br\b/i.test(n)),
+    ];
+    return [...new Set(ordered)].slice(0, 4);
   } catch (e) { return []; }
 }
 
