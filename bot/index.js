@@ -230,7 +230,8 @@ bot.onText(/\/list(?:\s+(.+))?/i, async (msg, match) => {
       return;
     }
 
-    // Paginate — show page 1
+    // Sort A-Z then paginate
+    filtered.sort((a, b) => a.title.localeCompare(b.title));
     sendListPage(chatId, filtered, filter, 0);
   } catch(e) {
     console.error('List error:', e);
@@ -331,7 +332,7 @@ bot.on('callback_query', async (cbq) => {
     const page   = parseInt(parts[2], 10) || 0;
     try {
       const games    = await getGames();
-      const filtered = platformFilter(games, filter);
+      const filtered = platformFilter(games, filter).sort((a, b) => a.title.localeCompare(b.title));
       if (filtered.length) sendListPage(chatId, filtered, filter, page);
     } catch(e) { console.error('List callback error:', e); }
     bot.answerCallbackQuery(cbq.id).catch(() => {});
