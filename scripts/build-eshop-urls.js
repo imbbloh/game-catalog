@@ -85,6 +85,44 @@ async function urlOk(url) {
   return 'blocked';
 }
 
+// Nintendo's own site search (Algolia, public search-only credentials used
+// by nintendo.com's frontend). Returns the store URL of the best-matching
+// product, or null.
+const ALGOLIA_APP = 'U3B6GR4UA3';
+const ALGOLIA_KEY = 'a29c6927638bfd8cee23993e51e721c9';
+const ALGOLIA_INDEXES = ['store_all_products', 'store_game_en_us', 'ncom_game_en_us'];
+
+function hitUrl(hit) {
+  const u = hit.url || (hit.slug ? `/store/products/${hit.slug}/` : '');
+  if (!u) return null;
+  if (/^https?:\/\//.test(u)) return u;
+  return 'https://www.nintendo.com' + (u.startsWith('/us/') ? u : '/us' + u);
+}
+
+async function searchStore(title) {
+  for (const index of ALGOLIA_INDEXES) {
+    try {
+      const res = await fetch(`https://${ALGOLIA_APP.toLowerCase()}-dsn.algolia.net/1/indexes/${index}/query`, {
+        method: 'POST',
+        headers: {
+          'x-algolia-application-id': ALGOLIA_APP,
+          'x-algolia-api-key': ALGOLIA_KEY,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ query: title, hitsPerPage: 5 }),
+      });
+      if (!res.ok) continue;
+      const d = await res.json();
+      const hits = (d.hits || []).filter(h => hitUrl(h) && /\/store\/products\//.test(hitUrl(h)));
+      if (!hits.length) continue;
+      const exact = hits.find(h => normTitle(h.title || '') === normTitle(title));
+      const hit = exact || hits[0];
+      return { url: hitUrl(hit), exact: !!exact, hitTitle: hit.title || '' };
+    } catch (e) {}
+  }
+  return null;
+}
+
 async function resolveTitle(title) {
   const fUrl = formulaUrl(title);
   let blocked = false;
@@ -97,6 +135,15 @@ async function resolveTitle(title) {
         : { url, status: 'verified — DIFFERS from formula, paste this into F' };
     }
   }
+
+  // Slug guesses failed — ask Nintendo's own store search
+  const found = await searchStore(title);
+  if (found && await urlOk(found.url) === true) {
+    return found.exact
+      ? { url: found.url, status: 'verified via store search — paste this into F' }
+      : { url: found.url, status: `search best match ("${found.hitTitle}") — VERIFY, then paste into F` };
+  }
+
   if (blocked) return { url: fUrl, status: 'rate-limited — rerun workflow later' };
   return { url: fUrl, status: 'NOT FOUND — check manually' };
 }
