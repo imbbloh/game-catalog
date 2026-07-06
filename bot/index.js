@@ -146,7 +146,7 @@ async function getCatalog() {
 
 async function getGames() {
   const catalog = await getCatalog();
-  return catalog.map(g => ({
+  return catalog.filter(g => g.type !== 'code').map(g => ({
     title:    g.title,
     normal:   g.normalPrice !== null ? g.normalPrice : g.codePrice,
     premium:  g.premiumPrice,
