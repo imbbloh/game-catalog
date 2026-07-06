@@ -20,17 +20,18 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          cp eshop-urls.csv /tmp/eshop-urls.csv
+          cp eshop-urls.csv paste-into-F2.tsv /tmp/
           for i in 1 2 3; do
-            git add eshop-urls.csv
+            git add eshop-urls.csv paste-into-F2.tsv
             if git diff --cached --quiet; then
-              echo "eshop-urls.csv unchanged"
+              echo "outputs unchanged"
               break
             fi
-            git commit -m "Update eshop-urls.csv"
+            git commit -m "Update eshop-urls.csv and paste-into-F2.tsv"
             if git push; then break; fi
             echo "push rejected — resetting and retrying ($i/3)"
             git fetch origin main
             git reset --hard origin/main
             cp /tmp/eshop-urls.csv eshop-urls.csv
+            cp /tmp/paste-into-F2.tsv paste-into-F2.tsv
           done
