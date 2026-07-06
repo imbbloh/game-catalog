@@ -225,9 +225,9 @@ bot.onText(/\/price(?:\s+(.+))?/i, async (msg, match) => {
 
     // Always show list if multiple matches (up to 10)
     if (matches.length > 1) {
-      const buttons = matches.slice(0, 10).map(m => ([{
+      const buttons = matches.slice(0, 10).map((m, i) => ([{
         text: m.g.title,
-        callback_data: `pick:${m.g.title.substring(0, 60)}`
+        callback_data: `pick:${i}:${query.substring(0, 30)}`
       }]));
       try {
         await bot.sendMessage(chatId, `<i>📋 ${matches.length} games matched. Tap to view another:</i>`, {
@@ -250,12 +250,14 @@ bot.on('callback_query', async (cbq) => {
   const data   = cbq.data || '';
 
   if (data.startsWith('pick:')) {
-    const title = data.slice(5);
+    const parts = data.split(':');
+    const idx   = parseInt(parts[1], 10);
+    const query = parts.slice(2).join(':');
     try {
       const games   = await getGames();
-      const matches = searchGames(games, title);
-      if (matches.length) {
-        await sendGameResult(chatId, matches[0].g, title);
+      const matches = searchGames(games, query);
+      if (matches[idx]) {
+        await sendGameResult(chatId, matches[idx].g, query);
       }
     } catch(e) {
       console.error('Callback error:', e);
