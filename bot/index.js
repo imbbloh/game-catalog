@@ -249,7 +249,7 @@ function sendListPage(chatId, games, filter, page) {
     const normal  = g.normalPrice  ? `$${g.normalPrice.toFixed(2)}`  : (g.normal  ? `$${g.normal.toFixed(2)}`  : 'N/A');
     const premium = g.premiumPrice ? `$${g.premiumPrice.toFixed(2)}` : (g.premium ? `$${g.premium.toFixed(2)}` : 'N/A');
     text += `${start + i + 1}. <b>${esc(g.title)}</b>\n`;
-    text += `   💰 ${normal} · ⭐ ${premium}\n`;
+    text += `   🟡 ${normal} · 🟢 ${premium}\n`;
   });
 
   // Navigation buttons
@@ -354,8 +354,8 @@ async function sendGameResult(chatId, g, query) {
   let caption = `<b>${esc(g.title)}</b>\n`;
   if (g.platform) caption += `🕹 ${esc(g.platform)}\n`;
   caption += '\n';
-  caption += `💰 <b>Normal:</b> ${normal}\n`;
-  caption += `⭐ <b>Premium:</b> ${premium}\n`;
+  caption += `🟡 <b>Normal:</b> ${normal}\n`;
+  caption += `🟢 <b>Premium:</b> ${premium}\n`;
   caption += '\n';
   if (storeUrl.startsWith('http')) caption += `🏪 <a href="${storeUrl}">View Store</a>\n`;
   caption += `🛒 <a href="${carousell}">Carousell Listing</a>`;
@@ -392,7 +392,7 @@ function helpText() {
     + "You don't need the exact title — keywords work!\n\n"
     + 'Each result shows:\n'
     + '🖼 Cover art\n'
-    + '💰 Normal &amp; Premium prices\n'
+    + '🟡 Normal · 🟢 Premium prices\n'
     + '🏪 Store link\n'
     + '🛒 Carousell listing';
 }
