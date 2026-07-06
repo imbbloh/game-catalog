@@ -213,18 +213,34 @@ async function resolveTitle(title) {
   return { url: fUrl, status: 'NOT FOUND — check manually' };
 }
 
-// Reuse verified results from a previous run so reruns only hit unresolved rows
+// Reuse verified results from a previous run so reruns only hit unresolved rows.
+// Handles both the old 4-column and current 6-column CSV layouts.
 function loadPrevious() {
   const prev = {};
   try {
     const lines = fs.readFileSync('eshop-urls.csv', 'utf8').split('\n').slice(1);
     const split = line => line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(f => f.replace(/^"|"$/g, '').replace(/""/g, '"'));
     lines.filter(Boolean).forEach(line => {
-      const [, title, url, status] = split(line);
-      if (title && status && status.startsWith('verified')) prev[title] = { url, status };
+      const f = split(line);
+      const entry = f.length >= 6
+        ? { title: f[1], url: f[2], id: f[3], cover: f[4], status: f[5] }
+        : { title: f[1], url: f[2], id: '', cover: '', status: f[3] };
+      if (entry.title && entry.status && entry.status.startsWith('verified')) {
+        prev[entry.title] = { url: entry.url, status: entry.status, id: entry.id, cover: entry.cover };
+      }
     });
   } catch (e) {}
   return prev;
+}
+
+// Scrape the Nintendo ID (nsuid) and cover art URL from a product page
+async function fetchMeta(url) {
+  const html = await fetchText(url);
+  await sleep(250);
+  const id = (html.match(/"nsuid"\s*:\s*"?(\d{10,20})"?/) || html.match(/"sku"\s*:\s*"([^"]+)"/) || [])[1] || '';
+  const cover = (html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)
+    || html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i) || [])[1] || '';
+  return { id, cover };
 }
 
 (async () => {
@@ -260,25 +276,56 @@ function loadPrevious() {
     while (cursor < rows.length) {
       const i = cursor++;
       const title = rows[i];
-      if (!title) { results[i] = { url: '', status: '' }; continue; }
-      if (previous[title]) { results[i] = previous[title]; continue; }
+      if (!title) { results[i] = { url: '', status: '', id: '', cover: '' }; continue; }
+      if (previous[title]) { results[i] = { ...previous[title] }; continue; }
       if (!cache[title]) cache[title] = resolveTitle(title);
-      results[i] = await cache[title];
+      results[i] = { ...(await cache[title]) };
       console.log(`[${i + 1}/${rows.length}] ${title} → ${results[i].status}`);
     }
   }
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 
+  // Second pass: scrape Nintendo ID + cover art from every verified page
+  // that doesn't have them yet (reruns skip pages already scraped).
+  const metaCache = {};
+  let metaCursor = 0;
+  async function metaWorker() {
+    while (metaCursor < rows.length) {
+      const i = metaCursor++;
+      const r = results[i];
+      if (!r || !r.status || !r.status.startsWith('verified')) continue;
+      if (r.id && r.cover) continue;
+      if (!metaCache[r.url]) metaCache[r.url] = fetchMeta(r.url);
+      const m = await metaCache[r.url];
+      r.id = r.id || m.id;
+      r.cover = r.cover || m.cover;
+      console.log(`meta [${i + 1}/${rows.length}] ${rows[i]} → id: ${r.id || '—'}, cover: ${r.cover ? 'yes' : '—'}`);
+    }
+  }
+  await Promise.all(Array.from({ length: CONCURRENCY }, metaWorker));
+
   const esc = s => /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  const lines = ['sheet_row,title,eshop_url,status'];
+  const lines = ['sheet_row,title,eshop_url,nintendo_id,cover_url,status'];
   rows.forEach((title, i) => {
+    const r = results[i];
     // +2: sheet rows are 1-based and row 1 is the header
-    lines.push([i + 2, esc(title), results[i].url, esc(results[i].status)].join(','));
+    lines.push([i + 2, esc(title), r.url, r.id || '', r.cover || '', esc(r.status)].join(','));
   });
   fs.writeFileSync('eshop-urls.csv', lines.join('\n') + '\n');
 
+  // Row-aligned TSV: copy the file contents, click F2 in the sheet, paste —
+  // fills columns F (eShop URL), G (Nintendo ID), H (Cover URL) in one go.
+  const tsv = rows.map((title, i) => {
+    const r = results[i];
+    const ok = r.status && r.status.startsWith('verified');
+    return [ok ? r.url : '', ok ? r.id || '' : '', ok ? r.cover || '' : ''].join('\t');
+  }).join('\n') + '\n';
+  fs.writeFileSync('paste-into-F2.tsv', tsv);
+
   const verified = results.filter(r => r && r.status.startsWith('verified')).length;
+  const withId    = results.filter(r => r && r.id).length;
+  const withCover = results.filter(r => r && r.cover).length;
   const missing  = results.filter(r => r && r.status.startsWith('NOT FOUND')).length;
   const limited  = results.filter(r => r && r.status.startsWith('rate-limited')).length;
-  console.log(`\nWrote eshop-urls.csv: ${verified} verified, ${missing} not found, ${limited} rate-limited`);
+  console.log(`\nWrote eshop-urls.csv + paste-into-F2.tsv: ${verified} verified (${withId} with ID, ${withCover} with cover), ${missing} not found, ${limited} rate-limited`);
 })().catch(err => { console.error(err); process.exit(1); });
