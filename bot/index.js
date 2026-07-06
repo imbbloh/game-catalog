@@ -217,18 +217,26 @@ bot.onText(/\/price(?:\s+(.+))?/i, async (msg, match) => {
     }
 
     // Send best result
-    await sendGameResult(chatId, matches[0].g, query);
+    try {
+      await sendGameResult(chatId, matches[0].g, query);
+    } catch(e) {
+      console.error('sendGameResult error:', e);
+    }
 
-    // If multiple matches, show list as inline buttons (up to 10)
+    // Always show list if multiple matches (up to 10)
     if (matches.length > 1) {
       const buttons = matches.slice(0, 10).map(m => ([{
         text: m.g.title,
         callback_data: `pick:${m.g.title.substring(0, 60)}`
       }]));
-      bot.sendMessage(chatId, `<i>📋 ${matches.length} games matched. Tap to view another:</i>`, {
-        parse_mode: 'HTML',
-        reply_markup: { inline_keyboard: buttons }
-      });
+      try {
+        await bot.sendMessage(chatId, `<i>📋 ${matches.length} games matched. Tap to view another:</i>`, {
+          parse_mode: 'HTML',
+          reply_markup: { inline_keyboard: buttons }
+        });
+      } catch(e) {
+        console.error('inline keyboard error:', e);
+      }
     }
   } catch (err) {
     console.error('Price query error:', err);
