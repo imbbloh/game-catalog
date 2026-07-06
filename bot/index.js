@@ -27,14 +27,14 @@ app.get('/', (req, res) => res.send('Game Catalog Bot is running.'));
 // Mirrors the website's parsing: column E = store URL, F = eShop title,
 // I = cover URL (with a row-scan fallback for image-looking URLs).
 const SHEET_TABS = [
-  { tab: 'Nintendo Switch Games',  type: 'ns' },
+  { tab: 'Raw Data',               type: 'ns' },
   { tab: 'Playstation Games',      type: 'ps' },
   { tab: 'Digital Codes - Switch', type: 'code' },
 ];
 
-const URL_COL   = 4;
+const URL_COL   = 5; // column F (Raw Data)
 const ESHOP_COL = 5;
-const COVER_COL = 8;
+const COVER_COL = 8; // column I
 
 const IMG_URL_RE  = /^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i;
 const IMG_HOST_RE = /^https?:\/\/(image\.api\.playstation\.com|assets\.nintendo\.com|img-eshop\.cdn\.nintendo\.net|lh\d\.googleusercontent\.com|drive\.google\.com)\//i;
