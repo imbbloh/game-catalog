@@ -182,15 +182,20 @@ if (WEBHOOK_URL) {
 // ── Search ────────────────────────────────────────────────────────────────────
 function searchGames(games, query) {
   const words = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 1);
-  const matches = [];
-  games.forEach(g => {
-    const tl  = g.title.toLowerCase().replace(/[^a-z0-9\s]/g, '');
-    let score = 0;
-    words.forEach(w => { if (tl.includes(w)) score++; });
-    if (score > 0) matches.push({ g, score });
-  });
-  matches.sort((a, b) => b.score - a.score);
-  return matches;
+  if (!words.length) return [];
+
+  const score = g => {
+    const tl = g.title.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+    return words.reduce((n, w) => n + (tl.includes(w) ? 1 : 0), 0);
+  };
+
+  const scored = games.map(g => ({ g, score: score(g) }));
+
+  // Prefer games matching ALL keywords; fall back to partial if none found
+  const full = scored.filter(x => x.score === words.length);
+  const results = full.length ? full : scored.filter(x => x.score > 0);
+
+  return results.sort((a, b) => b.score - a.score);
 }
 
 // ── Bot commands ──────────────────────────────────────────────────────────────
