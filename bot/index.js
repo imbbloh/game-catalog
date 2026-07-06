@@ -216,33 +216,71 @@ bot.onText(/\/price(?:\s+(.+))?/i, async (msg, match) => {
       return;
     }
 
-    const g         = matches[0].g;
-    const normal    = g.normal  ? `$${g.normal.toFixed(2)}`  : 'N/A';
-    const premium   = g.premium ? `$${g.premium.toFixed(2)}` : 'N/A';
-    const carousell = `https://www.carousell.sg/u/${CAROUSELL_USER}/?search=${encodeURIComponent(query)}`;
+    // Send best result
+    await sendGameResult(chatId, matches[0].g, query);
 
-    let caption = `<b>${esc(g.title)}</b>\n`;
-    if (g.platform) caption += `🕹 ${esc(g.platform)}\n`;
-    caption += '\n';
-    caption += `💰 <b>Normal:</b> ${normal}\n`;
-    caption += `⭐ <b>Premium:</b> ${premium}\n`;
-    caption += '\n';
-    if (g.url.startsWith('http')) caption += `🏪 <a href="${g.url}">View eShop</a>\n`;
-    caption += `🛒 <a href="${carousell}">Carousell Listing</a>`;
-    if (matches.length > 1) caption += `\n\n<i>${matches.length} games matched — showing best result</i>`;
-
-    if (g.cover.startsWith('http')) {
-      bot.sendPhoto(chatId, g.cover, { caption, parse_mode: 'HTML' }).catch(() => {
-        bot.sendMessage(chatId, caption, { parse_mode: 'HTML', disable_web_page_preview: false });
+    // If multiple matches, show list as inline buttons (up to 10)
+    if (matches.length > 1) {
+      const buttons = matches.slice(0, 10).map(m => ([{
+        text: m.g.title,
+        callback_data: `pick:${m.g.title.substring(0, 60)}`
+      }]));
+      bot.sendMessage(chatId, `<i>📋 ${matches.length} games matched. Tap to view another:</i>`, {
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: buttons }
       });
-    } else {
-      bot.sendMessage(chatId, caption, { parse_mode: 'HTML', disable_web_page_preview: false });
     }
   } catch (err) {
     console.error('Price query error:', err);
     bot.sendMessage(chatId, '❌ Something went wrong. Please try again.');
   }
 });
+
+// ── Callback handler for inline buttons ───────────────────────────────────────
+bot.on('callback_query', async (cbq) => {
+  const chatId = cbq.message.chat.id;
+  const data   = cbq.data || '';
+
+  if (data.startsWith('pick:')) {
+    const title = data.slice(5);
+    try {
+      const games   = await getGames();
+      const matches = searchGames(games, title);
+      if (matches.length) {
+        await sendGameResult(chatId, matches[0].g, title);
+      }
+    } catch(e) {
+      console.error('Callback error:', e);
+    }
+  }
+  bot.answerCallbackQuery(cbq.id).catch(() => {});
+});
+
+// ── Send a single game result ─────────────────────────────────────────────────
+async function sendGameResult(chatId, g, query) {
+  const normal    = g.normalPrice  ? `$${g.normalPrice.toFixed(2)}`  : (g.normal  ? `$${g.normal.toFixed(2)}`  : 'N/A');
+  const premium   = g.premiumPrice ? `$${g.premiumPrice.toFixed(2)}` : (g.premium ? `$${g.premium.toFixed(2)}` : 'N/A');
+  const carousell = `https://www.carousell.sg/u/${CAROUSELL_USER}/?search=${encodeURIComponent(query)}`;
+  const storeUrl  = g.url || g.eshop || '';
+
+  let caption = `<b>${esc(g.title)}</b>\n`;
+  if (g.platform) caption += `🕹 ${esc(g.platform)}\n`;
+  caption += '\n';
+  caption += `💰 <b>Normal:</b> ${normal}\n`;
+  caption += `⭐ <b>Premium:</b> ${premium}\n`;
+  caption += '\n';
+  if (storeUrl.startsWith('http')) caption += `🏪 <a href="${storeUrl}">View Store</a>\n`;
+  caption += `🛒 <a href="${carousell}">Carousell Listing</a>`;
+
+  const cover = g.cover || '';
+  if (cover.startsWith('http')) {
+    await bot.sendPhoto(chatId, cover, { caption, parse_mode: 'HTML' }).catch(() => {
+      bot.sendMessage(chatId, caption, { parse_mode: 'HTML', disable_web_page_preview: false });
+    });
+  } else {
+    await bot.sendMessage(chatId, caption, { parse_mode: 'HTML', disable_web_page_preview: false });
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function esc(t) {
