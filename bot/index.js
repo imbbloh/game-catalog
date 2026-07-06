@@ -222,7 +222,7 @@ bot.onText(/\/list(?:\s+(.+))?/i, async (msg, match) => {
   // Filter by platform
   try {
     const games    = await getGames();
-    const filtered = games.filter(g => g.platform && g.platform.toLowerCase().includes(filter));
+    const filtered = platformFilter(games, filter);
 
     if (!filtered.length) {
       bot.sendMessage(chatId, `❌ No games found for platform "<b>${esc(filter)}</b>".`, { parse_mode: 'HTML' });
@@ -236,6 +236,15 @@ bot.onText(/\/list(?:\s+(.+))?/i, async (msg, match) => {
     bot.sendMessage(chatId, '❌ Something went wrong. Please try again.');
   }
 });
+
+function platformFilter(games, filter) {
+  const f = filter.replace(/switch2/i, 'switch 2').toLowerCase();
+  return games.filter(g => {
+    const p = (g.platform || '').toLowerCase();
+    if (f === 'switch') return p.includes('switch') && !p.includes('switch 2');
+    return p.includes(f);
+  });
+}
 
 function sendListPage(chatId, games, filter, page) {
   const PAGE_SIZE = 50;
@@ -320,7 +329,7 @@ bot.on('callback_query', async (cbq) => {
     const page   = parseInt(parts[2], 10) || 0;
     try {
       const games    = await getGames();
-      const filtered = games.filter(g => g.platform && g.platform.toLowerCase().includes(filter));
+      const filtered = platformFilter(games, filter);
       if (filtered.length) sendListPage(chatId, filtered, filter, page);
     } catch(e) { console.error('List callback error:', e); }
     bot.answerCallbackQuery(cbq.id).catch(() => {});
