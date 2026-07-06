@@ -146,13 +146,14 @@ async function getCatalog() {
 
 async function getGames() {
   const catalog = await getCatalog();
-  return catalog.filter(g => g.type !== 'code').map(g => ({
+  return catalog.map(g => ({
     title:    g.title,
     normal:   g.normalPrice !== null ? g.normalPrice : g.codePrice,
     premium:  g.premiumPrice,
     platform: g.platform,
     url:      g.storeUrl,
     cover:    g.coverUrl,
+    type:     g.type,
   }));
 }
 
@@ -240,6 +241,7 @@ bot.onText(/\/list(?:\s+(.+))?/i, async (msg, match) => {
 function platformFilter(games, filter) {
   const f = filter.replace(/switch2/i, 'switch 2').toLowerCase();
   return games.filter(g => {
+    if (g.type === 'code') return false;
     const p = (g.platform || '').toLowerCase();
     if (f === 'switch') return p.includes('switch') && !p.includes('switch 2');
     return p.includes(f);
