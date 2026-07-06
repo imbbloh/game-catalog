@@ -1,0 +1,36 @@
+name: Build eShop URLs CSV
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Generate and verify eShop URLs
+        run: node scripts/build-eshop-urls.js
+      - name: Commit CSV
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp eshop-urls.csv /tmp/eshop-urls.csv
+          for i in 1 2 3; do
+            git add eshop-urls.csv
+            if git diff --cached --quiet; then
+              echo "eshop-urls.csv unchanged"
+              break
+            fi
+            git commit -m "Update eshop-urls.csv"
+            if git push; then break; fi
+            echo "push rejected — resetting and retrying ($i/3)"
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/eshop-urls.csv eshop-urls.csv
+          done
