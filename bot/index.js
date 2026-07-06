@@ -276,7 +276,7 @@ function sendListPage(chatId, games, filter, page) {
   bot.sendMessage(chatId, text, opts);
 }
 
-bot.onText(/\/price(?:\s+(.+))?/i, async (msg, match) => {
+bot.onText(/\/price(?!list)(?:\s+(.+))?$/i, async (msg, match) => {
   const chatId = msg.chat.id;
   const query  = (match[1] || '').trim();
 
