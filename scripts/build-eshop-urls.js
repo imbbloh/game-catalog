@@ -85,12 +85,63 @@ async function urlOk(url) {
   return 'blocked';
 }
 
-// Nintendo's own site search (Algolia, public search-only credentials used
-// by nintendo.com's frontend). Returns the store URL of the best-matching
-// product, or null.
-const ALGOLIA_APP = 'U3B6GR4UA3';
-const ALGOLIA_KEY = 'a29c6927638bfd8cee23993e51e721c9';
-const ALGOLIA_INDEXES = ['store_all_products', 'store_game_en_us', 'ncom_game_en_us'];
+// Nintendo's own site search (Algolia). The search-only credentials are
+// public — they ship in nintendo.com's frontend JS — but they rotate, so
+// discover them from the site at runtime with hardcoded values as fallback.
+const ALGOLIA_FALLBACK = { app: 'U3B6GR4UA3', key: 'a29c6927638bfd8cee23993e51e721c9' };
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+
+let algolia = null; // { app, key, indexes }
+
+async function fetchText(url) {
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': UA } });
+    return res.ok ? await res.text() : '';
+  } catch (e) { return ''; }
+}
+
+function extractCreds(src) {
+  const m = src.match(/algoliasearch\(\s*["']([A-Z0-9]{8,12})["']\s*,\s*["']([a-f0-9]{16,64})["']/i)
+    || src.match(/appId['"]?\s*[:=]\s*['"]([A-Z0-9]{8,12})['"][\s\S]{0,400}?apiKey['"]?\s*[:=]\s*['"]([a-f0-9]{16,64})['"]/i);
+  return m ? { app: m[1], key: m[2] } : null;
+}
+
+async function listIndexes(creds) {
+  try {
+    const res = await fetch(`https://${creds.app.toLowerCase()}-dsn.algolia.net/1/indexes`, {
+      headers: { 'x-algolia-application-id': creds.app, 'x-algolia-api-key': creds.key },
+    });
+    if (!res.ok) { console.log(`  algolia listIndexes: HTTP ${res.status}`); return []; }
+    const d = await res.json();
+    return (d.items || []).map(i => i.name).filter(n => /store|product|game/i.test(n));
+  } catch (e) { return []; }
+}
+
+async function initAlgolia() {
+  const candidates = [];
+  const page = await fetchText('https://www.nintendo.com/us/search/');
+  const inline = extractCreds(page);
+  if (inline) candidates.push(inline);
+  const scripts = [...page.matchAll(/src="([^"]+\.js[^"]*)"/g)]
+    .map(m => m[1].startsWith('http') ? m[1] : 'https://www.nintendo.com' + m[1])
+    .slice(0, 30);
+  for (const s of scripts) {
+    if (candidates.length) break;
+    const creds = extractCreds(await fetchText(s));
+    if (creds) candidates.push(creds);
+  }
+  candidates.push(ALGOLIA_FALLBACK);
+
+  for (const creds of candidates) {
+    const indexes = await listIndexes(creds);
+    if (indexes.length) {
+      console.log(`Algolia: app ${creds.app}, indexes: ${indexes.slice(0, 8).join(', ')}`);
+      return { ...creds, indexes: indexes.slice(0, 8) };
+    }
+  }
+  console.log('Algolia: no working credentials found — search fallback disabled');
+  return null;
+}
 
 function hitUrl(hit) {
   const u = hit.url || (hit.slug ? `/store/products/${hit.slug}/` : '');
@@ -100,22 +151,26 @@ function hitUrl(hit) {
 }
 
 async function searchStore(title) {
-  for (const index of ALGOLIA_INDEXES) {
+  if (!algolia) return null;
+  // "(DLC)" / "(Upgrade Pack)" markers hurt search relevance
+  const query = String(title).replace(/\((dlc|upgrade pack)\)/gi, '').trim();
+  for (const index of algolia.indexes) {
     try {
-      const res = await fetch(`https://${ALGOLIA_APP.toLowerCase()}-dsn.algolia.net/1/indexes/${index}/query`, {
+      const res = await fetch(`https://${algolia.app.toLowerCase()}-dsn.algolia.net/1/indexes/${encodeURIComponent(index)}/query`, {
         method: 'POST',
         headers: {
-          'x-algolia-application-id': ALGOLIA_APP,
-          'x-algolia-api-key': ALGOLIA_KEY,
+          'x-algolia-application-id': algolia.app,
+          'x-algolia-api-key': algolia.key,
           'content-type': 'application/json',
         },
-        body: JSON.stringify({ query: title, hitsPerPage: 5 }),
+        body: JSON.stringify({ query, hitsPerPage: 5 }),
       });
-      if (!res.ok) continue;
+      if (!res.ok) { console.log(`  algolia ${index}: HTTP ${res.status}`); continue; }
       const d = await res.json();
       const hits = (d.hits || []).filter(h => hitUrl(h) && /\/store\/products\//.test(hitUrl(h)));
       if (!hits.length) continue;
-      const exact = hits.find(h => normTitle(h.title || '') === normTitle(title));
+      const exact = hits.find(h => normTitle(h.title || '') === normTitle(title))
+        || hits.find(h => normTitle(h.title || '') === normTitle(query));
       const hit = exact || hits[0];
       return { url: hitUrl(hit), exact: !!exact, hitTitle: hit.title || '' };
     } catch (e) {}
@@ -184,6 +239,8 @@ function loadPrevious() {
 
   const previous = loadPrevious();
   console.log(`${Object.keys(previous).length} titles already verified in previous CSV`);
+
+  algolia = await initAlgolia();
 
   const results = new Array(rows.length).fill(null);
   const cache = {}; // duplicate titles resolve once
