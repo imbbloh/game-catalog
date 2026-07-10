@@ -1,0 +1,51 @@
+name: Build Carousell URLs
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_scrape:
+        description: 'Skip the browser scrape and reuse the committed carousell-listings.json'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright
+        if: ${{ !inputs.skip_scrape }}
+        run: |
+          npm init -y >/dev/null
+          npm install playwright --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Scrape Carousell profile
+        if: ${{ !inputs.skip_scrape }}
+        run: node scripts/carousell-scrape.mjs
+      - name: Match listings to sheet rows
+        run: node scripts/carousell-match.js
+      - name: Commit outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f package.json package-lock.json
+          cp carousell-listings.json carousell-urls.csv carousell-urls-raw-data.tsv carousell-urls-digital-codes.tsv /tmp/ 2>/dev/null || true
+          for i in 1 2 3; do
+            git add carousell-listings.json carousell-urls.csv carousell-urls-raw-data.tsv carousell-urls-digital-codes.tsv
+            if git diff --cached --quiet; then
+              echo "outputs unchanged"
+              break
+            fi
+            git commit -m "Update Carousell URL matches"
+            if git push; then break; fi
+            echo "push rejected — resetting and retrying ($i/3)"
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/carousell-listings.json /tmp/carousell-urls.csv /tmp/carousell-urls-raw-data.tsv /tmp/carousell-urls-digital-codes.tsv . 2>/dev/null || true
+          done
