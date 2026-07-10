@@ -166,4 +166,20 @@ const cell = (row, i) => {
 
   fs.writeFileSync('carousell-urls.csv', report.join('\n') + '\n');
   console.log('Wrote carousell-urls.csv report');
+
+  // Machine-readable matches for the Apps Script daily sync: it looks up each
+  // sheet row's title here and fills the Carousell URL cell if blank.
+  const matches = { ts: Date.now(), games: {}, codes: {} };
+  for (const [kind, cfg] of Object.entries(TABS)) {
+    const table = await fetchTab(cfg.tab);
+    table.rows.forEach(row => {
+      const title = cell(row, cfg.titleCol);
+      if (!title) return;
+      const price = parseFloat(cell(row, cfg.priceCol).replace(/[^0-9.]/g, '')) || null;
+      const m = bestMatch(title, price, pool[kind]);
+      if (m) matches[kind][title.toLowerCase().replace(/\s+/g, ' ').trim()] = m.c.url;
+    });
+  }
+  fs.writeFileSync('carousell-matches.json', JSON.stringify(matches, null, 1));
+  console.log(`Wrote carousell-matches.json (${Object.keys(matches.games).length} games, ${Object.keys(matches.codes).length} codes)`);
 })().catch(err => { console.error(err); process.exit(1); });
