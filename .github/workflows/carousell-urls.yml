@@ -1,15 +1,24 @@
 name: Build Carousell URLs
 
 on:
+  schedule:
+    - cron: '30 18 * * *'   # daily 02:30 GMT+8 — rematch new sheet rows
   workflow_dispatch:
     inputs:
       skip_scrape:
         description: 'Skip the browser scrape and reuse the committed carousell-listings.json'
         type: boolean
         default: false
+  push:
+    branches: [main]
+    paths: ['carousell-listings.json']   # rematch whenever fresh listings land
 
 permissions:
   contents: write
+
+concurrency:
+  group: carousell
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -19,25 +28,31 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install Playwright
-        if: ${{ !inputs.skip_scrape }}
+      # Carousell bot-blocks GitHub's IPs, so the CI scrape usually fails —
+      # that's fine: we fall back to the committed carousell-listings.json
+      # (refresh it locally: CDP_URL=http://127.0.0.1:9222 node scripts/carousell-scrape.mjs)
+      - name: Try scraping Carousell profile (best effort)
+        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.skip_scrape }}
         run: |
           npm init -y >/dev/null
           npm install playwright --no-audit --no-fund
           npx playwright install --with-deps chromium
-      - name: Scrape Carousell profile
-        if: ${{ !inputs.skip_scrape }}
-        run: node scripts/carousell-scrape.mjs
+          node scripts/carousell-scrape.mjs || echo "scrape failed — using committed carousell-listings.json"
+          rm -f package.json package-lock.json
       - name: Match listings to sheet rows
-        run: node scripts/carousell-match.js
+        run: |
+          if [ ! -s carousell-listings.json ]; then
+            echo "No carousell-listings.json available — run the local scrape first"; exit 1
+          fi
+          node scripts/carousell-match.js
       - name: Commit outputs
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          rm -f package.json package-lock.json
-          cp carousell-listings.json carousell-urls.csv carousell-urls-raw-data.tsv carousell-urls-digital-codes.tsv /tmp/ 2>/dev/null || true
+          FILES="carousell-listings.json carousell-matches.json carousell-urls.csv carousell-urls-raw-data.tsv carousell-urls-digital-codes.tsv"
+          mkdir -p /tmp/carousell && cp $FILES /tmp/carousell/ 2>/dev/null || true
           for i in 1 2 3; do
-            git add carousell-listings.json carousell-urls.csv carousell-urls-raw-data.tsv carousell-urls-digital-codes.tsv
+            git add $FILES 2>/dev/null || true
             if git diff --cached --quiet; then
               echo "outputs unchanged"
               break
@@ -47,5 +62,5 @@ jobs:
             echo "push rejected — resetting and retrying ($i/3)"
             git fetch origin main
             git reset --hard origin/main
-            cp /tmp/carousell-listings.json /tmp/carousell-urls.csv /tmp/carousell-urls-raw-data.tsv /tmp/carousell-urls-digital-codes.tsv . 2>/dev/null || true
+            cp /tmp/carousell/* . 2>/dev/null || true
           done
