@@ -969,6 +969,13 @@ function makeCard(game) {
   var titleEl = document.createElement('div');
   titleEl.className = 'card-title';
   titleEl.textContent = game.title;
+  if (carousellUrl) {
+    titleEl.style.cursor = 'pointer';
+    titleEl.addEventListener('click', function(e) {
+      e.stopPropagation();
+      window.open(carousellUrl, '_blank', 'noopener');
+    });
+  }
   body.appendChild(titleEl);
 
   var pricesEl = document.createElement('div');
