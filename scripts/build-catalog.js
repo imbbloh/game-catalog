@@ -38,14 +38,15 @@ async function fetchTab(tabName, type) {
 
   const colIdx = keywords => headers.findIndex(h => keywords.some(k => h.includes(k)));
   const idx = {
-    title:    colIdx(['game title', 'title', 'game name', 'game', 'name']),
-    normal:   colIdx(['normal']),
-    premium:  colIdx(['premium']),
-    price:    colIdx(['price', 'cost', 'amount']),
-    platform: colIdx(['platform']),
-    url:      URL_COL,
-    eshop:    ESHOP_COL,
-    cover:    colIdx(['cover url', 'cover image', 'cover', 'image url', 'image', 'thumbnail']),
+    title:     colIdx(['game title', 'title', 'game name', 'game', 'name']),
+    normal:    colIdx(['normal']),
+    premium:   colIdx(['premium']),
+    price:     colIdx(['price', 'cost', 'amount']),
+    platform:  colIdx(['platform']),
+    url:       URL_COL,
+    eshop:     ESHOP_COL,
+    cover:     colIdx(['cover url', 'cover image', 'cover', 'image url', 'image', 'thumbnail']),
+    carousell: colIdx(['carousell url', 'carousell']),
   };
   if (idx.cover < 0) idx.cover = COVER_COL;
 
@@ -81,6 +82,7 @@ async function fetchTab(tabName, type) {
       storeUrl:     val(row, idx.url).trim(),
       eshopTitle:   val(row, idx.eshop).trim(),
       coverUrl:     rowCover(row),
+      carousellUrl: val(row, idx.carousell).trim(),
       type,
     }))
     .filter(g => g.title.length > 0);
