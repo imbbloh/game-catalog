@@ -907,16 +907,20 @@ function makeCard(game) {
   var grad  = gradients[pc] || gradients.unk;
   var init  = game.title.charAt(0).toUpperCase();
 
+  var carousellUrl = 'https://www.carousell.sg/u/im.bbloh/?search=' + encodeURIComponent(game.title);
+
   // ── card element ──
   var card = document.createElement('div');
   card.className = 'game-card';
-  if (fullUrl) {
-    card.addEventListener('click', function() { window.open(fullUrl, '_blank', 'noopener'); });
-  }
 
   // ── cover ──
   var coverWrap = document.createElement('div');
   coverWrap.className = 'cover-wrap';
+  coverWrap.style.cursor = 'pointer';
+  coverWrap.addEventListener('click', function(e) {
+    e.stopPropagation();
+    window.open(carousellUrl, '_blank', 'noopener');
+  });
 
   // Placeholder (always shown until image is ready)
   var ph = document.createElement('div');
