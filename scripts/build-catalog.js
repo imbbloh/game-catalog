@@ -49,6 +49,8 @@ async function fetchTab(tabName, type) {
     carousell: colIdx(['carousell url', 'carousell']),
   };
   if (idx.cover < 0) idx.cover = COVER_COL;
+  console.log(`[${tabName}] headers:`, JSON.stringify(headers));
+  console.log(`[${tabName}] carousell col idx:`, idx.carousell, '→ header:', headers[idx.carousell]);
 
   const val = (row, i) => {
     if (i < 0 || !row.c || !row.c[i]) return '';
