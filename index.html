@@ -378,8 +378,9 @@ var COL_KEYS = {
   premium: ['premium price', 'premium version', 'premium'],
   price:   ['price', 'cost', 'amount'],
   platform:['platform'],
-  url:     ['store url', 'official store', 'url', 'link', 'store'],
-  cover:   ['cover url', 'cover image', 'cover', 'image url', 'image', 'thumbnail'],
+  url:      ['store url', 'official store', 'url', 'link', 'store'],
+  cover:    ['cover url', 'cover image', 'cover', 'image url', 'image', 'thumbnail'],
+  carousell:['carousell url', 'carousell'],
 };
 
 // ── Debug mode (?debug=1) — shows what the site parsed from each sheet ──────
@@ -715,6 +716,7 @@ function loadSheet(tabName) {
             storeUrl:     String(get(row, idx.url)).trim(),
             eshopTitle:   String(get(row, idx.eshopTitle)).trim(),
             coverUrl:     rowCover(row),
+            carousellUrl: String(get(row, idx.carousell)).trim(),
           };
         })
         .filter(function(g) { return g.title.length > 0; });
@@ -907,7 +909,7 @@ function makeCard(game) {
   var grad  = gradients[pc] || gradients.unk;
   var init  = game.title.charAt(0).toUpperCase();
 
-  var carousellUrl = 'https://www.carousell.sg/u/im.bbloh/?search=' + encodeURIComponent(game.title);
+  var carousellUrl = (game.carousellUrl && game.carousellUrl.startsWith('http')) ? game.carousellUrl : '';
 
   // ── card element ──
   var card = document.createElement('div');
@@ -916,11 +918,13 @@ function makeCard(game) {
   // ── cover ──
   var coverWrap = document.createElement('div');
   coverWrap.className = 'cover-wrap';
-  coverWrap.style.cursor = 'pointer';
-  coverWrap.addEventListener('click', function(e) {
-    e.stopPropagation();
-    window.open(carousellUrl, '_blank', 'noopener');
-  });
+  if (carousellUrl) {
+    coverWrap.style.cursor = 'pointer';
+    coverWrap.addEventListener('click', function(e) {
+      e.stopPropagation();
+      window.open(carousellUrl, '_blank', 'noopener');
+    });
+  }
 
   // Placeholder (always shown until image is ready)
   var ph = document.createElement('div');
