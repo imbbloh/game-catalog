@@ -46,7 +46,7 @@ async function fetchTab(tabName, type) {
     url:       URL_COL,
     eshop:     ESHOP_COL,
     cover:     colIdx(['cover url', 'cover image', 'cover', 'image url', 'image', 'thumbnail']),
-    carousell: colIdx(['carousell url', 'carousell']),
+    carousell: colIdx(['carousell url']),
   };
   if (idx.cover < 0) idx.cover = COVER_COL;
   console.log(`[${tabName}] headers:`, JSON.stringify(headers));
