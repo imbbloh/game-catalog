@@ -1150,14 +1150,27 @@ document.getElementById('sortSelect').addEventListener('change', function(e) {
   render();
 });
 
+var FILTER_HASH = { ns: '#nintendo', ps: '#playstation', code: '#codes', all: '' };
+var HASH_FILTER = { '#nintendo': 'ns', '#playstation': 'ps', '#codes': 'code' };
+
+function applyFilter(f) {
+  curFilter = f || 'all';
+  document.querySelectorAll('.f-pill').forEach(function(p) {
+    p.classList.toggle('on', p.dataset.f === curFilter);
+  });
+  var hash = FILTER_HASH[curFilter] || '';
+  history.replaceState(null, '', hash || location.pathname);
+  render();
+}
+
 document.getElementById('filterPills').addEventListener('click', function(e) {
   var pill = e.target.closest('.f-pill');
   if (!pill) return;
-  curFilter = pill.dataset.f;
-  document.querySelectorAll('.f-pill').forEach(function(p) { p.classList.remove('on'); });
-  pill.classList.add('on');
-  render();
+  applyFilter(pill.dataset.f);
 });
+
+// Apply filter from URL hash on load
+applyFilter(HASH_FILTER[location.hash] || 'all');
 </script>
 </body>
 </html>
