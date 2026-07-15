@@ -172,7 +172,7 @@ const cell = (row, i) => {
       if (!title) return;
       const price = parseFloat(cell(row, cfg.priceCol).replace(/[^0-9.]/g, '')) || null;
       const m = bestMatch(title, price, pool[kind]);
-      if (m) matches[kind][title.toLowerCase().replace(/\s+/g, ' ').trim()] = m.c.url;
+      if (m) matches[kind][title.toLowerCase().replace(/\s+/g, ' ').trim()] = { url: m.c.url, price: m.c.price ?? null };
     });
   }
   fs.writeFileSync('carousell-matches.json', JSON.stringify(matches, null, 1));
