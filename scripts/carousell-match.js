@@ -47,7 +47,7 @@ function cleanListingName(t) {
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}✅❗️]/gu, ' ')
     .replace(/<[^>]*>/g, ' ')
     .replace(/PREORDER BONUS/gi, ' ');
-  const seps = [/–/, / - Nintendo/i, /NS ?1/, /Redemption/i, /\[/, /\(Upgrade/i, / - Digital/i];
+  const seps = [/–/, / - Nintendo/i, /NS ?1/, /NS ?2/i, /Switch 2/i, /Redemption/i, /\[/, /\(Upgrade/i, / - Digital/i];
   let cut = t.length;
   for (const re of seps) {
     const m = t.search(re);
