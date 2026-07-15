@@ -37,7 +37,9 @@ jobs:
           npm init -y >/dev/null
           npm install playwright --no-audit --no-fund
           npx playwright install --with-deps chromium
-          node scripts/carousell-scrape.mjs || echo "scrape failed — using committed carousell-listings.json"
+          node scripts/carousell-scrape.mjs && \
+            node -e "const f=require('./carousell-listings.json');if(f.listings.length<30){process.exit(1)}" || \
+            { echo "scrape failed or too few listings — restoring committed carousell-listings.json"; git checkout HEAD -- carousell-listings.json; }
           rm -f package.json package-lock.json
       - name: Match listings to sheet rows
         run: |
