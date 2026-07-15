@@ -54,7 +54,7 @@ jobs:
             const m = JSON.parse(require('fs').readFileSync('carousell-matches.json','utf8'));
             console.log(JSON.stringify({ secret: '${{ secrets.APPS_SCRIPT_SECRET }}', matches: { games: m.games, codes: m.codes } }));
           ")
-          RESPONSE=$(curl -s -L -X POST '${{ secrets.APPS_SCRIPT_URL }}' \
+          RESPONSE=$(curl -s -L --post302 -X POST '${{ secrets.APPS_SCRIPT_URL }}' \
             -H 'Content-Type: application/json' \
             -d "$PAYLOAD")
           echo "Apps Script response: $RESPONSE"
