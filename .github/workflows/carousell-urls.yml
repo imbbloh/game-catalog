@@ -45,6 +45,19 @@ jobs:
             echo "No carousell-listings.json available — run the local scrape first"; exit 1
           fi
           node scripts/carousell-match.js
+      - name: Sync matched URLs to Google Sheet
+        run: |
+          if [ ! -s carousell-matches.json ]; then
+            echo "No carousell-matches.json — skipping sheet sync"; exit 0
+          fi
+          PAYLOAD=$(node -e "
+            const m = JSON.parse(require('fs').readFileSync('carousell-matches.json','utf8'));
+            console.log(JSON.stringify({ secret: '${{ secrets.APPS_SCRIPT_SECRET }}', matches: { games: m.games, codes: m.codes } }));
+          ")
+          RESPONSE=$(curl -s -X POST '${{ secrets.APPS_SCRIPT_URL }}' \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD")
+          echo "Apps Script response: $RESPONSE"
       - name: Commit outputs
         run: |
           git config user.name "github-actions[bot]"
