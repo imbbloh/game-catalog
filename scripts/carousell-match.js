@@ -1,6 +1,6 @@
 // Matches carousell-listings.json against the Google Sheet and produces
-// paste-ready Carousell URL columns. Rows whose Carousell URL cell is already
-// filled are kept as-is (skip); only blank cells get a scraped match.
+// paste-ready Carousell URL columns. Every matched row is always written —
+// existing URLs are overwritten so stale/removed listings get updated.
 //
 // Outputs (all row-aligned to the sheet, blank line = no match):
 //   carousell-urls-raw-data.tsv       → paste into the Carousell URL column of "Raw Data"
@@ -136,16 +136,11 @@ const cell = (row, i) => {
     console.log(`${cfg.tab}: carousell column index ${cCol} (${labels[cCol] || 'no header — add one!'})`);
 
     const out = [];
-    let matched = 0, skipped = 0, unmatched = 0;
+    let matched = 0, unmatched = 0;
     table.rows.forEach((row, i) => {
       const title = cell(row, cfg.titleCol);
       const existing = cell(row, cCol);
       if (!title) { out.push(''); return; }
-      if (/^https?:\/\//i.test(existing)) {               // already filled → skip, keep as-is
-        out.push(existing);
-        skipped++;
-        return;
-      }
       const price = parseFloat(cell(row, cfg.priceCol).replace(/[^0-9.]/g, '')) || null;
       const m = bestMatch(title, price, pool[kind]);
       if (m) {
@@ -161,14 +156,14 @@ const cell = (row, i) => {
 
     const file = kind === 'games' ? 'carousell-urls-raw-data.tsv' : 'carousell-urls-digital-codes.tsv';
     fs.writeFileSync(file, out.join('\n') + '\n');
-    console.log(`${cfg.tab}: ${matched} matched, ${skipped} already filled (kept), ${unmatched} unmatched → ${file}`);
+    console.log(`${cfg.tab}: ${matched} matched, ${unmatched} unmatched → ${file}`);
   }
 
   fs.writeFileSync('carousell-urls.csv', report.join('\n') + '\n');
   console.log('Wrote carousell-urls.csv report');
 
   // Machine-readable matches for the Apps Script daily sync: it looks up each
-  // sheet row's title here and fills the Carousell URL cell if blank.
+  // sheet row's title here and always writes the latest matched URL.
   const matches = { ts: Date.now(), games: {}, codes: {} };
   for (const [kind, cfg] of Object.entries(TABS)) {
     const table = await fetchTab(cfg.tab);
