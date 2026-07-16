@@ -13,7 +13,7 @@ const SHEET_ID = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
 // Sheet tabs: [tab, titleCol, priceCol, default carousell col (0-based)]
 const TABS = {
   games: { tab: 'Raw Data',                 titleCol: 1, priceCol: 2, carousellCol: 9, platColFallback: 4 }, // J, Platform=E
-  codes: { tab: 'Raw Data - Digital Codes', titleCol: 2, priceCol: 3, carousellCol: 8, platColFallback: -1 },
+  codes: { tab: 'Raw Data - Digital Codes', titleCol: 2, priceCol: 3, carousellCol: 8, platColFallback: -1 }, // platform col found dynamically via header search
 };
 
 // ── Normalization (mirrors the matching spec) ────────────────────────────────
@@ -85,9 +85,11 @@ function sheetPlatforms(val) {
   return out;
 }
 
-// Compatible if listing platform is unknown, sheet has no platforms, or listing platform is in sheet set
+// Compatible if listing platform is unknown/undetected AND sheet has a platform set, or listing platform is in sheet set.
+// If sheet has no platform (blank), the row is skipped (platform is required).
 function platformsCompatible(lp, spSet) {
-  if (!lp || !spSet || spSet.size === 0) return true;
+  if (!spSet || spSet.size === 0) return false;  // blank sheet platform → skip row
+  if (!lp) return true;                           // listing platform undetectable → allow
   return spSet.has(lp);
 }
 
