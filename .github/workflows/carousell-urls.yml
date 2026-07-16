@@ -34,18 +34,25 @@ jobs:
       - name: Try scraping Carousell profile (best effort)
         if: ${{ github.event_name == 'workflow_dispatch' && !inputs.skip_scrape }}
         run: |
+          enough() { node -e "const f=JSON.parse(require('fs').readFileSync('carousell-listings.json'));process.exit(f.listings.length>=10?0:1)" 2>/dev/null; }
           # Try API scrape first (no browser needed, faster)
-          node scripts/carousell-api-scrape.mjs && \
-            node -e "const f=JSON.parse(require('fs').readFileSync('carousell-listings.json'));if(f.listings.length<10){process.exit(1)}" || \
-          { echo "API scrape failed — trying browser scrape...";
+          node scripts/carousell-api-scrape.mjs || true
+          if enough; then
+            echo "API scrape succeeded"
+          else
+            echo "API scrape insufficient — trying browser scrape..."
             npm init -y >/dev/null
             npm install playwright playwright-extra puppeteer-extra-plugin-stealth --no-audit --no-fund
             npx playwright install --with-deps chromium
-            node scripts/carousell-scrape.mjs; }
-          # If still too few listings, restore committed file
-          node -e "const f=JSON.parse(require('fs').readFileSync('carousell-listings.json'));if(f.listings.length<10){process.exit(1)}" || \
-            { echo "Both scrape methods failed — restoring committed carousell-listings.json"; git checkout HEAD -- carousell-listings.json; }
-          rm -f package.json package-lock.json 2>/dev/null || true
+            node scripts/carousell-scrape.mjs || true
+            rm -f package.json package-lock.json 2>/dev/null || true
+            if enough; then
+              echo "Browser scrape succeeded"
+            else
+              echo "Both scrape methods failed — restoring committed carousell-listings.json"
+              git checkout HEAD -- carousell-listings.json
+            fi
+          fi
       - name: Match listings to sheet rows
         run: |
           if [ ! -s carousell-listings.json ]; then
