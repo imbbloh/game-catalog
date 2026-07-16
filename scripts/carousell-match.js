@@ -89,7 +89,7 @@ function platformsCompatible(lp, spSet) {
 
 // ── Matching ─────────────────────────────────────────────────────────────────
 function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates) {
-  const st = tokens(sheetTitle);
+  const st = tokens(cleanListingName(sheetTitle));
   const sn = numSet(st);
   const stSet = new Set(st);
 
