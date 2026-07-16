@@ -162,17 +162,17 @@ const cell = (row, i) => {
   fs.writeFileSync('carousell-urls.csv', report.join('\n') + '\n');
   console.log('Wrote carousell-urls.csv report');
 
-  // Machine-readable matches for the Apps Script daily sync: it looks up each
-  // sheet row's title here and always writes the latest matched URL.
+  // Machine-readable matches for the Apps Script daily sync.
+  // Keyed by 1-based sheet row number so duplicate titles don't overwrite each other.
   const matches = { ts: Date.now(), games: {}, codes: {} };
   for (const [kind, cfg] of Object.entries(TABS)) {
     const table = await fetchTab(cfg.tab);
-    table.rows.forEach(row => {
+    table.rows.forEach((row, i) => {
       const title = cell(row, cfg.titleCol);
       if (!title) return;
       const price = parseFloat(cell(row, cfg.priceCol).replace(/[^0-9.]/g, '')) || null;
       const m = bestMatch(title, price, pool[kind]);
-      if (m) matches[kind][title.toLowerCase().replace(/\s+/g, ' ').trim()] = { url: m.c.url, price: m.c.price ?? null };
+      if (m) matches[kind][String(i + 2)] = { url: m.c.url, price: m.c.price ?? null };
     });
   }
   fs.writeFileSync('carousell-matches.json', JSON.stringify(matches, null, 1));
