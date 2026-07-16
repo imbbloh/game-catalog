@@ -2,13 +2,8 @@ name: Build Carousell URLs
 
 on:
   schedule:
-    - cron: '30 18 * * *'   # daily 02:30 GMT+8 — rematch new sheet rows
+    - cron: '30 18 * * *'   # daily 02:30 GMT+8
   workflow_dispatch:
-    inputs:
-      skip_scrape:
-        description: 'Skip the browser scrape and reuse the committed carousell-listings.json'
-        type: boolean
-        default: false
   push:
     branches: [main]
     paths: ['carousell-listings.json']   # rematch whenever fresh listings land
@@ -28,15 +23,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      # Carousell bot-blocks GitHub's IPs, so the CI scrape usually fails —
-      # that's fine: we fall back to the committed carousell-listings.json
-      # (refresh it locally: CDP_URL=http://127.0.0.1:9222 node scripts/carousell-scrape.mjs)
-      - name: Try scraping Carousell profile (best effort)
-        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.skip_scrape }}
+
+      - name: Try scraping Carousell (best effort, falls back to committed JSON)
         run: |
           enough() { node -e "const f=JSON.parse(require('fs').readFileSync('carousell-listings.json'));process.exit(f.listings.length>=10?0:1)" 2>/dev/null; }
-          # Try API scrape first (no browser needed, faster)
+
+          # Try API scrape first (no browser needed)
           node scripts/carousell-api-scrape.mjs || true
+
           if enough; then
             echo "API scrape succeeded"
           else
@@ -49,16 +43,14 @@ jobs:
             if enough; then
               echo "Browser scrape succeeded"
             else
-              echo "Both scrape methods failed — restoring committed carousell-listings.json"
+              echo "Scrape failed — falling back to committed carousell-listings.json"
               git checkout HEAD -- carousell-listings.json
             fi
           fi
+
       - name: Match listings to sheet rows
-        run: |
-          if [ ! -s carousell-listings.json ]; then
-            echo "No carousell-listings.json available — run the local scrape first"; exit 1
-          fi
-          node scripts/carousell-match.js
+        run: node scripts/carousell-match.js
+
       - name: Sync matched URLs to Google Sheet
         run: |
           if [ ! -s carousell-matches.json ]; then
@@ -72,6 +64,7 @@ jobs:
             -H 'Content-Type: application/json' \
             -d "$PAYLOAD")
           echo "Apps Script response: $RESPONSE"
+
       - name: Commit outputs
         run: |
           git config user.name "github-actions[bot]"
