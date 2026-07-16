@@ -60,8 +60,33 @@ function isCode(listing) {
   return /DIGITAL CODE/i.test(listing.text) || /redemption-game-code|digital-code/i.test(listing.href || '');
 }
 
+// ── Platform detection ────────────────────────────────────────────────────────
+// Returns a canonical platform tag from a Carousell listing name
+function listingPlatform(name) {
+  const s = String(name).toLowerCase();
+  if (/ps5|playstation\s*5/.test(s)) return 'ps5';
+  if (/ps4|playstation\s*4/.test(s)) return 'ps4';
+  if (/\bswitch\b|nintendo\s*switch|\bns\b|\bns2\b/.test(s)) return 'switch';
+  return null;
+}
+
+// Returns a canonical platform tag from the sheet Platform column value
+function sheetPlatform(val) {
+  const s = String(val || '').toLowerCase().replace(/[^a-z0-9&]/g, '');
+  if (s.includes('ps5')) return 'ps5';
+  if (s.includes('ps4')) return 'ps4';
+  if (s.includes('switch')) return 'switch';
+  return null;
+}
+
+// Two platforms are compatible if either is unknown, or they match
+function platformsCompatible(lp, sp) {
+  if (!lp || !sp) return true;
+  return lp === sp;
+}
+
 // ── Matching ─────────────────────────────────────────────────────────────────
-function bestMatch(sheetTitle, sheetPrice, candidates) {
+function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates) {
   const st = tokens(sheetTitle);
   const sn = numSet(st);
   const stSet = new Set(st);
@@ -69,7 +94,8 @@ function bestMatch(sheetTitle, sheetPrice, candidates) {
   const eligible = [];
   for (const c of candidates) {
     if (/\bSOLD\b/i.test(c.text)) continue;                       // sold items
-    if (/\bps[45]?\b|playstation/i.test(c.name)) continue;        // wrong platform
+    const lp = listingPlatform(c.name);
+    if (!platformsCompatible(lp, sheetPlat)) continue;            // platform mismatch
     const lt = c.toks;
     if (!setEq(sn, numSet(lt))) continue;                         // numeric guard (sequels)
     const ltSet = new Set(lt);
@@ -135,6 +161,9 @@ const cell = (row, i) => {
     if (cCol < 0) cCol = cfg.carousellCol;
     console.log(`${cfg.tab}: carousell column index ${cCol} (${labels[cCol] || 'no header — add one!'})`);
 
+    let platCol = labels.findIndex(h => h.includes('platform'));
+    console.log(`${cfg.tab}: platform column index ${platCol} (${platCol >= 0 ? labels[platCol] : 'not found — no platform filtering'})`);
+
     const out = [];
     let matched = 0, unmatched = 0;
     table.rows.forEach((row, i) => {
@@ -142,7 +171,8 @@ const cell = (row, i) => {
       const existing = cell(row, cCol);
       if (!title) { out.push(''); return; }
       const price = parseFloat(cell(row, cfg.priceCol).replace(/[^0-9.]/g, '')) || null;
-      const m = bestMatch(title, price, pool[kind]);
+      const plat = platCol >= 0 ? sheetPlatform(cell(row, platCol)) : null;
+      const m = bestMatch(title, price, plat, pool[kind]);
       if (m) {
         out.push(m.c.url);
         matched++;
@@ -167,11 +197,14 @@ const cell = (row, i) => {
   const matches = { ts: Date.now(), games: {}, codes: {} };
   for (const [kind, cfg] of Object.entries(TABS)) {
     const table = await fetchTab(cfg.tab);
+    const labels2 = table.cols.map(c => (c.label || '').toLowerCase().trim());
+    const platCol2 = labels2.findIndex(h => h.includes('platform'));
     table.rows.forEach((row, i) => {
       const title = cell(row, cfg.titleCol);
       if (!title) return;
       const price = parseFloat(cell(row, cfg.priceCol).replace(/[^0-9.]/g, '')) || null;
-      const m = bestMatch(title, price, pool[kind]);
+      const plat = platCol2 >= 0 ? sheetPlatform(cell(row, platCol2)) : null;
+      const m = bestMatch(title, price, plat, pool[kind]);
       if (m) matches[kind][String(i + 2)] = { url: m.c.url, price: m.c.price ?? null };
     });
   }
