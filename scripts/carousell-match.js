@@ -96,7 +96,7 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates) {
   const eligible = [];
   for (const c of candidates) {
     if (/\bSOLD\b/i.test(c.text)) continue;                       // sold items
-    const lp = listingPlatform(c.name);
+    const lp = listingPlatform(c.text);  // use original text — platform info is often after the separator
     if (!platformsCompatible(lp, sheetPlat)) continue;            // platform mismatch
     const lt = c.toks;
     if (!setEq(sn, numSet(lt))) continue;                         // numeric guard (sequels)
