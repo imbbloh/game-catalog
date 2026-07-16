@@ -63,9 +63,9 @@ jobs:
           # Strip any accidental whitespace from the URL secret
           SCRIPT_URL=$(echo '${{ secrets.APPS_SCRIPT_URL }}' | tr -d '[:space:]')
           echo "Posting to URL length: ${#SCRIPT_URL} chars"
-          HTTP_CODE=$(curl -s -o /tmp/as_response.txt -w "%{http_code}" -L -X POST "$SCRIPT_URL" \
+          HTTP_CODE=$(curl -s -o /tmp/as_response.txt -w "%{http_code}" -L "$SCRIPT_URL" \
             -H 'Content-Type: application/json' \
-            -d "$PAYLOAD")
+            --data "$PAYLOAD")
           echo "HTTP status: $HTTP_CODE"
           RESPONSE=$(cat /tmp/as_response.txt)
           # Print only first 500 chars to avoid flooding logs with HTML
