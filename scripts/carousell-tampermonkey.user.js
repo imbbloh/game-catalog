@@ -1,128 +1,155 @@
 // ==UserScript==
-// @name         Carousell → GitHub Auto-Push
-// @namespace    https://github.com/imbbloh/game-catalog
-// @version      2.0
-// @description  Scrapes all Carousell listings and pushes carousell-listings.json to GitHub automatically
-// @author       imbbloh
+// @name         Carousell Listing Scraper v8
+// @namespace    http://tampermonkey.net/
+// @version      8.0
 // @match        https://www.carousell.sg/u/*
 // @grant        GM_xmlhttpRequest
-// @grant        GM_setValue
-// @grant        GM_getValue
 // @connect      api.github.com
 // ==/UserScript==
 
 (function () {
   'use strict';
 
-  // ── CONFIG — fill these in ──────────────────────────────────────────────────
-  const GITHUB_TOKEN = 'YOUR_GITHUB_PAT_HERE';   // paste your Personal Access Token
-  const GITHUB_REPO  = 'imbbloh/game-catalog';
-  const GITHUB_FILE  = 'carousell-listings.json';
+  // ── CONFIG — paste your GitHub Personal Access Token here ──────────────────
+  const GITHUB_TOKEN  = 'YOUR_GITHUB_PAT_HERE';
+  const GITHUB_REPO   = 'imbbloh/game-catalog';
+  const GITHUB_FILE   = 'carousell-listings.json';
   const GITHUB_BRANCH = 'main';
   // ───────────────────────────────────────────────────────────────────────────
 
-  const USER = location.pathname.replace(/^\/u\//, '').replace(/\/$/, '');
+  const captured = new Map();
 
-  // ── Intercept Carousell's own API responses ─────────────────────────────────
-  const apiData = new Map(); // id → { title, price }
-
-  function walkObj(obj, depth = 0) {
-    if (!obj || typeof obj !== 'object' || depth > 12) return;
-    if (Array.isArray(obj)) { obj.forEach(v => walkObj(v, depth + 1)); return; }
-    const id    = String(obj.id || obj.listingId || obj.listing_id || '');
-    const title = obj.title || obj.name || obj.listing_title || obj.header || '';
-    const raw   = obj.price ?? obj.listing_price ?? obj.priceTag ?? obj.price_cents;
-    let price   = null;
-    if (typeof raw === 'number')      price = raw > 1000 ? raw / 100 : raw;
-    else if (typeof raw === 'string') price = parseFloat(raw.replace(/[^0-9.]/g, '')) || null;
-    else if (raw && typeof raw === 'object') {
-      const v = raw.amount ?? raw.value ?? raw.figure ?? raw.display ?? '';
-      price = parseFloat(String(v).replace(/[^0-9.]/g, '')) || null;
-      if (price > 10000) price /= 100;
-    }
-    if (id && title) apiData.set(id, { title: String(title).trim(), price });
-    Object.values(obj).forEach(v => walkObj(v, depth + 1));
+  function extractId(href) {
+    let m = href.match(/\/p\/(\d+)\/?/);
+    if (m) return m[1];
+    m = href.match(/\/p\/[^/?#]*?-(\d{6,})[/?#]?/);
+    if (m) return m[1];
+    return null;
   }
 
-  const _open = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function (...args) {
-    this.addEventListener('load', function () {
-      try {
-        if ((this.getResponseHeader('content-type') || '').includes('json')) {
-          walkObj(JSON.parse(this.responseText));
-        }
-      } catch (_) {}
-    });
-    return _open.apply(this, args);
-  };
+  function scrapeDOM() {
+    for (const a of document.querySelectorAll('a[href*="/p/"]')) {
+      const id = extractId(a.href);
+      if (!id || captured.has(id)) continue;
+      const card = a.closest('li, article, [data-testid]') || a.parentElement;
+      const cardText = card?.innerText || '';
+      const lines = cardText.split('\n').map(l => l.trim()).filter(Boolean);
+      const rawTitle = lines[0] || '';
+      const title = rawTitle.replace(/^[✅❗️⚠️<>\s]+/, '').split(/\s*[–—]\s*/)[0].trim();
+      const pm = cardText.match(/S\$\s?([\d,]+(?:\.\d{1,2})?)/);
+      const price = pm ? parseFloat(pm[1].replace(/,/g, '')) : null;
+      captured.set(id, { id, title, price, url: `https://www.carousell.sg/p/${id}/`, text: rawTitle });
+    }
+  }
 
-  // ── UI button ───────────────────────────────────────────────────────────────
-  const btn = document.createElement('button');
-  btn.textContent = '⬆ Push to GitHub';
-  Object.assign(btn.style, {
-    position: 'fixed', bottom: '24px', right: '24px', zIndex: 99999,
-    background: '#238636', color: '#fff', border: 'none', borderRadius: '8px',
-    padding: '12px 20px', fontSize: '15px', fontWeight: 'bold',
-    cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+  function findViewMore() {
+    for (const el of document.querySelectorAll('button, [role="button"], a, span, p')) {
+      if (!el.offsetParent) continue;
+      if (/^view\s*more/i.test(el.textContent.trim())) return el;
+    }
+    return null;
+  }
+
+  async function waitForListings(minCount = 5, timeoutMs = 10000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (document.querySelectorAll('a[href*="/p/"]').length >= minCount) return true;
+      await delay(300);
+    }
+    return false;
+  }
+
+  async function applyActiveFilter() {
+    const filterBtn = [...document.querySelectorAll('button')]
+      .find(el => /filter/i.test(el.textContent.trim()) && el.offsetParent);
+    if (!filterBtn) { status.textContent = 'Filter button not found — scraping all'; return; }
+    filterBtn.click();
+    await delay(800);
+
+    for (const el of document.querySelectorAll('label, [role="checkbox"]')) {
+      const t = el.textContent.trim();
+      const cb = el.querySelector('input[type="checkbox"]') || el;
+      if (/^active$/i.test(t) && !cb.checked) { el.click(); await delay(300); }
+      if (/^(inactive|reserved|sold)$/i.test(t) && cb.checked) { el.click(); await delay(300); }
+    }
+
+    const applyBtn = [...document.querySelectorAll('button')]
+      .find(el => /^apply$/i.test(el.textContent.trim()) && el.offsetParent);
+    if (applyBtn) {
+      applyBtn.click();
+      status.textContent = 'Filter applied — waiting for listings…';
+      await waitForListings(5, 10000);
+      await delay(500);
+    }
+  }
+
+  // ── UI ─────────────────────────────────────────────────────────────────────
+  const panel = document.createElement('div');
+  Object.assign(panel.style, {
+    position: 'fixed', top: '10px', right: '10px', zIndex: 99999,
+    display: 'flex', flexDirection: 'column', gap: '6px', width: '210px',
   });
-  document.body.appendChild(btn);
+  document.body.appendChild(panel);
 
-  function setStatus(msg, color = '#238636') {
-    btn.textContent = msg;
-    btn.style.background = color;
-  }
+  const status = document.createElement('div');
+  Object.assign(status.style, {
+    background: 'rgba(0,0,0,.85)', color: '#fff', padding: '8px 12px',
+    borderRadius: '6px', fontSize: '13px',
+  });
+  status.textContent = 'Ready — click Scrape';
+  panel.appendChild(status);
 
-  // ── Collect listings from DOM + API intercept ───────────────────────────────
-  function collectListings() {
-    const seen = new Set();
-    const listings = [];
-    document.querySelectorAll('a[href*="/p/"]').forEach(a => {
-      const m = a.getAttribute('href').match(/\/p\/(?:[^/]*-)?(\d+)\/?/);
-      if (!m) return;
-      const id = m[1];
-      if (seen.has(id)) return;
-      seen.add(id);
-      const api      = apiData.get(id);
-      const domText  = (a.closest('li, article, [data-testid]')?.textContent || '').trim().slice(0, 600);
-      let price      = api?.price ?? null;
-      if (price === null) {
-        const prices = domText.match(/S\$\s?[\d,]+(?:\.\d{1,2})?/g);
-        if (prices) price = parseFloat(prices[prices.length - 1].replace(/[^0-9.]/g, '')) || null;
-      }
-      listings.push({
-        id,
-        url:   `https://www.carousell.sg/p/${id}/`,
-        href:  a.getAttribute('href'),
-        text:  api?.title ?? domText.slice(0, 300),
-        price,
-      });
+  function makeBtn(label, color, fn) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    Object.assign(b.style, {
+      padding: '10px 16px', background: color, color: '#fff',
+      border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px',
     });
-    return listings;
+    b.addEventListener('click', fn);
+    panel.appendChild(b);
+    return b;
   }
 
-  // ── Scroll until all listings are loaded ───────────────────────────────────
-  async function scrollToBottom() {
-    setStatus('Scrolling…', '#1158c7');
-    let prev = -1, stable = 0;
-    for (let i = 0; i < 300; i++) {
-      // Click "View more" if visible
-      const viewMore = [...document.querySelectorAll('button, [role="button"]')]
-        .find(el => el.textContent.trim().toLowerCase().includes('view more'));
-      if (viewMore) viewMore.click();
-      window.scrollTo(0, document.body.scrollHeight);
-      await sleep(700);
-      const count = document.querySelectorAll('a[href*="/p/"]').length;
-      if (count === prev) {
-        if (++stable >= 5 && !viewMore) break;
-      } else {
+  const scrapeBtn = makeBtn('🔍 Scrape Active Only', '#e6440a', scrape);
+  makeBtn('⬆ Push to GitHub', '#238636', pushToGitHub);
+  makeBtn('💾 Export JSON', '#0a0', download);
+
+  async function scrape() {
+    scrapeBtn.disabled = true;
+    captured.clear();
+    status.textContent = 'Applying Active filter…';
+
+    await applyActiveFilter();
+
+    let stable = 0, prevSize = -1;
+    while (true) {
+      scrapeDOM();
+      status.textContent = `Captured: ${captured.size} — loading more…`;
+
+      const vm = findViewMore();
+      if (vm) {
+        vm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await delay(600);
+        vm.click();
+        await delay(2500);
         stable = 0;
+      } else {
+        window.scrollTo(0, document.body.scrollHeight);
+        await delay(1500);
+        if (captured.size === prevSize) { if (++stable >= 4) break; }
+        else stable = 0;
       }
-      prev = count;
-      if (i % 10 === 0) setStatus(`Scrolling… (${count} found)`, '#1158c7');
+      prevSize = captured.size;
     }
+
+    scrapeDOM();
+    scrapeBtn.disabled = false;
+    scrapeBtn.textContent = '🔍 Scrape Active Only';
+    status.textContent = `✅ Done! ${captured.size} listings — click Push or Export`;
   }
 
-  // ── Push JSON to GitHub via API ─────────────────────────────────────────────
+  // ── GitHub push ─────────────────────────────────────────────────────────────
   function githubRequest(method, path, body) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
@@ -143,19 +170,29 @@
     });
   }
 
-  async function pushToGitHub(listings) {
-    setStatus('Getting current file SHA…', '#1158c7');
-    // Get current file SHA (needed for update)
-    const { status, data } = await githubRequest(
+  async function pushToGitHub() {
+    if (GITHUB_TOKEN === 'YOUR_GITHUB_PAT_HERE') {
+      alert('Please set your GITHUB_TOKEN in the Tampermonkey script first.');
+      return;
+    }
+    const listings = [...captured.values()];
+    if (listings.length < 5) {
+      alert(`Only ${listings.length} listings captured — run Scrape first.`);
+      return;
+    }
+
+    status.textContent = 'Getting file SHA…';
+    const { status: s, data } = await githubRequest(
       'GET',
       `/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}?ref=${GITHUB_BRANCH}`
     );
-    const sha = status === 200 ? data.sha : undefined;
+    const sha = s === 200 ? data.sha : undefined;
 
-    const content = JSON.stringify({ ts: Date.now(), user: USER, listings }, null, 1);
-    const encoded = btoa(unescape(encodeURIComponent(content))); // UTF-8 safe base64
+    const user = location.pathname.replace(/^\/u\//, '').replace(/\/$/, '');
+    const content = JSON.stringify({ ts: Date.now(), user, listings }, null, 1);
+    const encoded = btoa(unescape(encodeURIComponent(content)));
 
-    setStatus('Pushing to GitHub…', '#1158c7');
+    status.textContent = 'Pushing to GitHub…';
     const result = await githubRequest(
       'PUT',
       `/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`,
@@ -168,36 +205,22 @@
     );
 
     if (result.status === 200 || result.status === 201) {
-      setStatus(`✅ Pushed ${listings.length} listings!`, '#238636');
+      status.textContent = `✅ Pushed ${listings.length} listings to GitHub!`;
     } else {
       console.error('GitHub push failed:', result);
-      setStatus(`❌ Push failed (${result.status})`, '#b91c1c');
+      status.textContent = `❌ Push failed (${result.status}) — check console`;
     }
   }
 
-  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function download() {
+    const listings = [...captured.values()];
+    const out = { ts: Date.now(), user: 'im.bbloh', listings };
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'carousell-listings.json';
+    a.click();
+  }
 
-  // ── Main ────────────────────────────────────────────────────────────────────
-  btn.addEventListener('click', async () => {
-    if (GITHUB_TOKEN === 'YOUR_GITHUB_PAT_HERE') {
-      alert('Please set your GITHUB_TOKEN in the Tampermonkey script first.');
-      return;
-    }
-    btn.disabled = true;
-    try {
-      await scrollToBottom();
-      const listings = collectListings();
-      setStatus(`Found ${listings.length} listings — pushing…`, '#1158c7');
-      if (listings.length < 5) {
-        setStatus(`⚠ Only ${listings.length} found — try scrolling manually first`, '#b45309');
-        btn.disabled = false;
-        return;
-      }
-      await pushToGitHub(listings);
-    } catch (err) {
-      console.error(err);
-      setStatus('❌ Error — check console', '#b91c1c');
-    }
-    btn.disabled = false;
-  });
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 })();
