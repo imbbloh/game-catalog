@@ -12,8 +12,8 @@ const SHEET_ID = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
 
 // Sheet tabs: [tab, titleCol, priceCol, default carousell col (0-based)]
 const TABS = {
-  games: { tab: 'Raw Data',                 titleCol: 1, priceCol: 2, carousellCol: 9 }, // J
-  codes: { tab: 'Raw Data - Digital Codes', titleCol: 2, priceCol: 3, carousellCol: 8 }, // I
+  games: { tab: 'Raw Data',                 titleCol: 1, priceCol: 2, carousellCol: 9, platColFallback: 4 }, // J, Platform=E
+  codes: { tab: 'Raw Data - Digital Codes', titleCol: 2, priceCol: 3, carousellCol: 8, platColFallback: -1 },
 };
 
 // ── Normalization (mirrors the matching spec) ────────────────────────────────
@@ -70,19 +70,21 @@ function listingPlatform(name) {
   return null;
 }
 
-// Returns a canonical platform tag from the sheet Platform column value
-function sheetPlatform(val) {
-  const s = String(val || '').toLowerCase().replace(/[^a-z0-9&]/g, '');
-  if (s.includes('ps5')) return 'ps5';
-  if (s.includes('ps4')) return 'ps4';
-  if (s.includes('switch')) return 'switch';
-  return null;
+// Returns a Set of canonical platform tags from the sheet Platform column value
+// Handles combined values like "PS4 & PS5" → Set{'ps4','ps5'}
+function sheetPlatforms(val) {
+  const s = String(val || '').toLowerCase();
+  const out = new Set();
+  if (/ps5/.test(s)) out.add('ps5');
+  if (/ps4/.test(s)) out.add('ps4');
+  if (/switch/.test(s)) out.add('switch');
+  return out;
 }
 
-// Two platforms are compatible if either is unknown, or they match
-function platformsCompatible(lp, sp) {
-  if (!lp || !sp) return true;
-  return lp === sp;
+// Compatible if listing platform is unknown, sheet has no platforms, or listing platform is in sheet set
+function platformsCompatible(lp, spSet) {
+  if (!lp || !spSet || spSet.size === 0) return true;
+  return spSet.has(lp);
 }
 
 // ── Matching ─────────────────────────────────────────────────────────────────
@@ -162,7 +164,8 @@ const cell = (row, i) => {
     console.log(`${cfg.tab}: carousell column index ${cCol} (${labels[cCol] || 'no header — add one!'})`);
 
     let platCol = labels.findIndex(h => h.includes('platform'));
-    console.log(`${cfg.tab}: platform column index ${platCol} (${platCol >= 0 ? labels[platCol] : 'not found — no platform filtering'})`);
+    if (platCol < 0) platCol = cfg.platColFallback ?? -1;
+    console.log(`${cfg.tab}: platform column index ${platCol} (${platCol >= 0 ? (labels[platCol] || 'col '+platCol) : 'not found — no platform filtering'})`);
 
     const out = [];
     let matched = 0, unmatched = 0;
@@ -171,7 +174,7 @@ const cell = (row, i) => {
       const existing = cell(row, cCol);
       if (!title) { out.push(''); return; }
       const price = parseFloat(cell(row, cfg.priceCol).replace(/[^0-9.]/g, '')) || null;
-      const plat = platCol >= 0 ? sheetPlatform(cell(row, platCol)) : null;
+      const plat = platCol >= 0 ? sheetPlatforms(cell(row, platCol)) : new Set();
       const m = bestMatch(title, price, plat, pool[kind]);
       if (m) {
         out.push(m.c.url);
@@ -198,12 +201,13 @@ const cell = (row, i) => {
   for (const [kind, cfg] of Object.entries(TABS)) {
     const table = await fetchTab(cfg.tab);
     const labels2 = table.cols.map(c => (c.label || '').toLowerCase().trim());
-    const platCol2 = labels2.findIndex(h => h.includes('platform'));
+    let platCol2 = labels2.findIndex(h => h.includes('platform'));
+    if (platCol2 < 0) platCol2 = cfg.platColFallback ?? -1;
     table.rows.forEach((row, i) => {
       const title = cell(row, cfg.titleCol);
       if (!title) return;
       const price = parseFloat(cell(row, cfg.priceCol).replace(/[^0-9.]/g, '')) || null;
-      const plat = platCol2 >= 0 ? sheetPlatform(cell(row, platCol2)) : null;
+      const plat = platCol2 >= 0 ? sheetPlatforms(cell(row, platCol2)) : new Set();
       const m = bestMatch(title, price, plat, pool[kind]);
       if (m) matches[kind][String(i + 2)] = { url: m.c.url, price: m.c.price ?? null };
     });
