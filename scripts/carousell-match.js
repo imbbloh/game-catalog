@@ -18,8 +18,8 @@ const TABS = {
 
 // ── Normalization (mirrors the matching spec) ────────────────────────────────
 const ROMAN  = { ii: '2', iii: '3', iv: '4', vi: '6', vii: '7', viii: '8', ix: '9', xi: '11', xii: '12', xiii: '13' };
-const FILLER = new Set(['nintendo', 'switch', 'edition', 'the']);
-const VARIANT = new Set(['bundle', 'expansion', 'pass', 'dlc', 'deluxe', 'ultimate', 'edition']);
+const FILLER = new Set(['nintendo', 'switch', 'edition', 'the', 'and']);
+const VARIANT = new Set(['bundle', 'expansion', 'pass', 'dlc', 'deluxe', 'ultimate', 'edition', 'digital']);
 
 function tokens(s) {
   return String(s).toLowerCase()
@@ -51,13 +51,23 @@ function cleanListingName(t) {
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}✅❗️]/gu, ' ')
     .replace(/<[^>]*>/g, ' ')
     .replace(/PREORDER BONUS/gi, ' ');
-  const seps = [/–/, / - Nintendo/i, /NS ?\d/i, / Switch \d/i, /Redemption/i, /\[/, /\(Upgrade/i, / - Digital/i];
+  // " + " (spaced plus) separates base game from DLC/content suffix (e.g. "Kirby + Star-Crossed World")
+  const seps = [/–/, / \+ /i, / - Nintendo/i, /NS ?\d/i, / Switch \d/i, /Redemption/i, /\[/, /\(Upgrade/i, / - Digital/i];
   let cut = t.length;
   for (const re of seps) {
     const m = t.search(re);
     if (m >= 0 && m < cut) cut = m;
   }
   return t.slice(0, cut).replace(/\s+/g, ' ').trim();
+}
+
+// Returns token variants for a listing: the full token set plus each "/" part separately.
+// Allows a "A / B" combo listing to match either the A row or the B row.
+function listingTokenVariants(name) {
+  const full = tokens(name);
+  if (!name.includes('/')) return [full];
+  const parts = name.split('/').map(p => tokens(cleanListingName(p.trim()))).filter(t => t.length >= 2);
+  return parts.length > 1 ? [full, ...parts] : [full];
 }
 
 function isCode(listing) {
@@ -94,26 +104,41 @@ function platformsCompatible(lp, spSet) {
 }
 
 // ── Matching ─────────────────────────────────────────────────────────────────
-function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates) {
+// allSheetToks: union of tokens from every row in this tab — used to detect when a
+// listing's extra words belong to a different sheet row (e.g. "jamboree" appears in
+// "Super Mario Party Jamboree" but not in "Super Mario Party", so it's a row-exclusive
+// token that should block a contained match for the base row).
+function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks = new Set()) {
   const st = tokens(cleanListingName(sheetTitle));
   const sn = numSet(st);
   const stSet = new Set(st);
+  // tokens that appear in OTHER rows but not this row's title
+  const otherRowToks = new Set([...allSheetToks].filter(t => !stSet.has(t)));
 
   const eligible = [];
   for (const c of candidates) {
     if (/\bSOLD\b/i.test(c.text)) continue;                       // sold items
     const lp = listingPlatform(c.text);  // use original text — platform info is often after the separator
     if (!platformsCompatible(lp, sheetPlat)) continue;            // platform mismatch
-    const lt = c.toks;
-    if (!setEq(sn, numSet(lt))) continue;                         // numeric guard (sequels)
-    const ltSet = new Set(lt);
-    const exact = st.length === lt.length && st.every((t, i) => t === lt[i]);
-    const contained = [...stSet].every(t => ltSet.has(t));
-    const jac = jaccard(st, lt);
-    if (!(exact || contained || jac >= 0.82)) continue;
-    let extra = 0;
-    for (const t of ltSet) if (!stSet.has(t)) extra += VARIANT.has(t) ? 1.5 : 1;
-    eligible.push({ c, exact, extra, jac });
+
+    // Try full token set and each "/" part (combo listings like "A / B" can match either row)
+    let bestVariant = null;
+    for (const lt of listingTokenVariants(c.name)) {
+      if (!setEq(sn, numSet(lt))) continue;                       // numeric guard (sequels)
+      const ltSet = new Set(lt);
+      const exact = st.length === lt.length && st.every((t, i) => t === lt[i]);
+      const extraToks = [...ltSet].filter(t => !stSet.has(t));
+      // contained passes unless an extra token is a VARIANT word OR a keyword that
+      // appears exclusively in another row's title (e.g. "jamboree" → wrong game)
+      const containedPass = [...stSet].every(t => ltSet.has(t)) &&
+        extraToks.every(t => VARIANT.has(t) || !otherRowToks.has(t));
+      const jac = jaccard(st, lt);
+      if (!(exact || containedPass || jac >= 0.82)) continue;
+      let extra = 0;
+      for (const t of ltSet) if (!stSet.has(t)) extra += VARIANT.has(t) ? 1.5 : 1;
+      if (!bestVariant || exact || jac > bestVariant.jac) bestVariant = { exact, extra, jac };
+    }
+    if (bestVariant) eligible.push({ c, ...bestVariant });
   }
 
   eligible.sort((a, b) =>
@@ -173,6 +198,13 @@ const cell = (row, i) => {
     if (platCol < 0) platCol = cfg.platColFallback ?? -1;
     console.log(`${cfg.tab}: platform column index ${platCol} (${platCol >= 0 ? (labels[platCol] || 'col '+platCol) : 'not found — no platform filtering'})`);
 
+    // Union of all title tokens in this tab — used to detect row-exclusive listing words
+    const allSheetToks = new Set();
+    table.rows.forEach(row => {
+      const t = cell(row, cfg.titleCol);
+      if (t) for (const tok of tokens(cleanListingName(t))) allSheetToks.add(tok);
+    });
+
     const out = [];
     let matched = 0, unmatched = 0;
     table.rows.forEach((row, i) => {
@@ -181,7 +213,7 @@ const cell = (row, i) => {
       if (!title) { out.push(''); return; }
       const price = parseFloat(cell(row, cfg.priceCol).replace(/[^0-9.]/g, '')) || null;
       const plat = platCol >= 0 ? sheetPlatforms(cell(row, platCol)) : new Set();
-      const m = bestMatch(title, price, plat, pool[kind]);
+      const m = bestMatch(title, price, plat, pool[kind], allSheetToks);
       if (m) {
         out.push(m.c.url);
         matched++;
@@ -209,12 +241,17 @@ const cell = (row, i) => {
     const labels2 = table.cols.map(c => (c.label || '').toLowerCase().trim());
     let platCol2 = labels2.findIndex(h => h.includes('platform'));
     if (platCol2 < 0) platCol2 = cfg.platColFallback ?? -1;
+    const allSheetToks2 = new Set();
+    table.rows.forEach(row => {
+      const t = cell(row, cfg.titleCol);
+      if (t) for (const tok of tokens(cleanListingName(t))) allSheetToks2.add(tok);
+    });
     table.rows.forEach((row, i) => {
       const title = cell(row, cfg.titleCol);
       if (!title) return;
       const price = parseFloat(cell(row, cfg.priceCol).replace(/[^0-9.]/g, '')) || null;
       const plat = platCol2 >= 0 ? sheetPlatforms(cell(row, platCol2)) : new Set();
-      const m = bestMatch(title, price, plat, pool[kind]);
+      const m = bestMatch(title, price, plat, pool[kind], allSheetToks2);
       if (m) matches[kind][String(i + 2)] = { url: m.c.url, price: m.c.price ?? null };
     });
   }
