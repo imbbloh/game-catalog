@@ -10,8 +10,11 @@
 //   CDP_URL=http://127.0.0.1:9222 node scripts/...    # attach to YOUR logged-in
 //     Chrome (start it with --remote-debugging-port=9222) — use this if the
 //     headless run gets bot-blocked.
-import { chromium } from 'playwright';
+import { chromium } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import fs from 'fs';
+
+chromium.use(StealthPlugin());
 
 const USER = process.env.CAROUSELL_USER || 'im.bbloh';
 const PROFILE_URL = `https://www.carousell.sg/u/${USER}/`;
@@ -21,8 +24,10 @@ const browser = process.env.CDP_URL
   : await chromium.launch({ headless: true });
 
 const context = process.env.CDP_URL ? browser.contexts()[0] : await browser.newContext({
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
   viewport: { width: 1280, height: 900 },
+  locale: 'en-SG',
+  timezoneId: 'Asia/Singapore',
 });
 const page = await context.newPage();
 
