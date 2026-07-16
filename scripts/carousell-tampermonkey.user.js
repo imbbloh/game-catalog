@@ -111,8 +111,7 @@
     return b;
   }
 
-  const scrapeBtn = makeBtn('🔍 Scrape Active Only', '#e6440a', scrape);
-  makeBtn('⬆ Push to GitHub', '#238636', pushToGitHub);
+  const scrapeBtn = makeBtn('🔍 Scrape & Push to GitHub', '#e6440a', scrape);
   makeBtn('💾 Export JSON', '#0a0', download);
 
   async function scrape() {
@@ -145,8 +144,9 @@
 
     scrapeDOM();
     scrapeBtn.disabled = false;
-    scrapeBtn.textContent = '🔍 Scrape Active Only';
-    status.textContent = `✅ Done! ${captured.size} listings — click Push or Export`;
+    scrapeBtn.textContent = '🔍 Scrape & Push to GitHub';
+    status.textContent = `✅ Done! ${captured.size} listings — pushing to GitHub…`;
+    await pushToGitHub();
   }
 
   // ── GitHub push ─────────────────────────────────────────────────────────────
