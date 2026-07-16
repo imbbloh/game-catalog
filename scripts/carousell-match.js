@@ -32,7 +32,11 @@ function tokens(s) {
     .filter(t => !FILLER.has(t));
 }
 
-const numSet = toks => new Set(toks.filter(t => /^\d+$/.test(t)));
+const numSet = toks => {
+  const nums = toks.filter(t => /^\d+$/.test(t));
+  // Exclude bare numbers that are substrings of another token (e.g. "26" inside "2k26")
+  return new Set(nums.filter(n => !toks.some(t => t !== n && t.includes(n))));
+};
 const setEq = (a, b) => a.size === b.size && [...a].every(x => b.has(x));
 
 function jaccard(a, b) {
