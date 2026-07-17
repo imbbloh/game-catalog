@@ -131,7 +131,7 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
       // contained passes unless an extra token is a VARIANT word OR a keyword that
       // appears exclusively in another row's title (e.g. "jamboree" → wrong game)
       const containedPass = [...stSet].every(t => ltSet.has(t)) &&
-        extraToks.every(t => VARIANT.has(t) || !otherRowToks.has(t));
+        extraToks.every(t => VARIANT.has(t) || /^\d+$/.test(t) || !otherRowToks.has(t));
       const jac = jaccard(st, lt);
       if (!(exact || containedPass || jac >= 0.82)) continue;
       let extra = 0;
