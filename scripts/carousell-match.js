@@ -34,8 +34,10 @@ function tokens(s) {
 
 const numSet = toks => {
   const nums = toks.filter(t => /^\d+$/.test(t));
-  // Exclude bare numbers that are substrings of another token (e.g. "26" inside "2k26")
-  return new Set(nums.filter(n => !toks.some(t => t !== n && t.includes(n))));
+  // Exclude a number only when it is the suffix of another digit-starting token
+  // (e.g. "26" in "2k26"). Alphanumeric tokens like "bo7" or "12switch" do NOT
+  // count — "7" stays in numSet even though "bo7" contains it.
+  return new Set(nums.filter(n => !toks.some(t => t !== n && /^\d/.test(t) && t.endsWith(n))));
 };
 const setEq = (a, b) => a.size === b.size && [...a].every(x => b.has(x));
 
@@ -142,7 +144,7 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
       // contained passes unless an extra token is a VARIANT word OR a keyword that
       // appears exclusively in another row's title (e.g. "jamboree" → wrong game)
       const containedPass = [...stSet].every(t => ltSet.has(t)) &&
-        extraToks.every(t => VARIANT.has(t) || /^\d+$/.test(t) || !otherRowToks.has(t));
+        extraToks.every(t => VARIANT.has(t) || /^\d+$/.test(t) || t.length < 6 || !otherRowToks.has(t));
       const jac = jaccard(st, lt);
       if (!(exact || containedPass || jac >= 0.82)) continue;
       let extra = 0;
