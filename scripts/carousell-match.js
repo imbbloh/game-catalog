@@ -46,6 +46,7 @@ function jaccard(a, b) {
 }
 
 // ── Listing name cleanup ─────────────────────────────────────────────────────
+// Applied to Carousell listing text — strips emoji, HTML, and platform/edition suffixes.
 function cleanListingName(t) {
   t = String(t)
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}✅❗️]/gu, ' ')
@@ -59,6 +60,15 @@ function cleanListingName(t) {
     if (m >= 0 && m < cut) cut = m;
   }
   return t.slice(0, cut).replace(/\s+/g, ' ').trim();
+}
+
+// Applied to sheet titles — only strips the em-dash edition suffix (e.g. "– Nintendo Switch 2 Edition").
+// Does NOT apply listing-specific separators like " Switch \d" which would corrupt titles
+// like "Nintendo Switch 2 Welcome Tour".
+function cleanSheetTitle(t) {
+  t = String(t);
+  const m = t.search(/–/);
+  return (m >= 0 ? t.slice(0, m) : t).replace(/\s+/g, ' ').trim();
 }
 
 // Returns token variants for a listing: the full token set plus each "/" part separately.
@@ -109,7 +119,7 @@ function platformsCompatible(lp, spSet) {
 // "Super Mario Party Jamboree" but not in "Super Mario Party", so it's a row-exclusive
 // token that should block a contained match for the base row).
 function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks = new Set()) {
-  const st = tokens(cleanListingName(sheetTitle));
+  const st = tokens(cleanSheetTitle(sheetTitle));
   const sn = numSet(st);
   const stSet = new Set(st);
   // tokens that appear in OTHER rows but not this row's title
@@ -118,6 +128,7 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
   const eligible = [];
   for (const c of candidates) {
     if (/\bSOLD\b/i.test(c.text)) continue;                       // sold items
+    if (/^bumped$/i.test(c.name)) continue;                       // seller bump placeholder
     const lp = listingPlatform(c.text);  // use original text — platform info is often after the separator
     if (!platformsCompatible(lp, sheetPlat)) continue;            // platform mismatch
 
@@ -202,7 +213,7 @@ const cell = (row, i) => {
     const allSheetToks = new Set();
     table.rows.forEach(row => {
       const t = cell(row, cfg.titleCol);
-      if (t) for (const tok of tokens(cleanListingName(t))) allSheetToks.add(tok);
+      if (t) for (const tok of tokens(cleanSheetTitle(t))) allSheetToks.add(tok);
     });
 
     const out = [];
