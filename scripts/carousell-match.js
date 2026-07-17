@@ -18,7 +18,7 @@ const TABS = {
 
 // ── Normalization (mirrors the matching spec) ────────────────────────────────
 const ROMAN  = { ii: '2', iii: '3', iv: '4', vi: '6', vii: '7', viii: '8', ix: '9', xi: '11', xii: '12', xiii: '13' };
-const FILLER = new Set(['nintendo', 'switch', 'edition', 'the', 'and']);
+const FILLER = new Set(['nintendo', 'switch', 'edition', 'the', 'and', 'for']);
 const VARIANT = new Set(['bundle', 'expansion', 'pass', 'dlc', 'deluxe', 'ultimate', 'edition', 'digital']);
 
 function tokens(s) {
@@ -34,12 +34,11 @@ function tokens(s) {
 
 const numSet = toks => {
   const nums = toks.filter(t => /^\d+$/.test(t));
-  // Exclude a number only when it is the suffix of another digit-starting token
-  // (e.g. "26" in "2k26"). Alphanumeric tokens like "bo7" or "12switch" do NOT
-  // count — "7" stays in numSet even though "bo7" contains it.
-  return new Set(nums.filter(n => !toks.some(t => t !== n && /^\d/.test(t) && t.endsWith(n))));
+  // Exclude a number only when it is the suffix of a mixed digit-starting token
+  // (e.g. "26" in "2k26"). Pure numbers like "2026" (FIFA 2026) don't exclude "26",
+  // and alphanumeric tokens like "bo7" or "12switch" don't exclude "7"/"1" either.
+  return new Set(nums.filter(n => !toks.some(t => t !== n && /^\d/.test(t) && !/^\d+$/.test(t) && t.endsWith(n))));
 };
-const setEq = (a, b) => a.size === b.size && [...a].every(x => b.has(x));
 
 function jaccard(a, b) {
   const A = new Set(a), B = new Set(b);
@@ -139,7 +138,11 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
     // Try full token set and each "/" part (combo listings like "A / B" can match either row)
     let bestVariant = null;
     for (const lt of listingTokenVariants(c.name)) {
-      if (!setEq(sn, numSet(lt))) continue;                       // numeric guard (sequels)
+      // Numeric guard: every number in the sheet title must appear in the listing.
+      // The listing may carry extra numbers (search keywords like "FIFA 2026", "RE 9",
+      // "Galaxy 1+2") — those count toward `extra` so a cleaner listing still wins.
+      const ln = numSet(lt);
+      if (![...sn].every(n => ln.has(n))) continue;
       const ltSet = new Set(lt);
       const exact = st.length === lt.length && st.every((t, i) => t === lt[i]);
       const extraToks = [...ltSet].filter(t => !stSet.has(t));
