@@ -54,8 +54,9 @@ function cleanListingName(t) {
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}✅❗️]/gu, ' ')
     .replace(/<[^>]*>/g, ' ')
     .replace(/PREORDER BONUS/gi, ' ');
-  // " + " (spaced plus) separates base game from DLC/content suffix (e.g. "Kirby + Star-Crossed World")
-  const seps = [/–/, / \+ /i, / - Nintendo/i, /NS ?\d/i, / Switch \d/i, /Redemption/i, /\[/, /\(Upgrade/i, / - Digital/i];
+  // " + " is NOT a separator here — game titles like "Super Mario 3D World + Bowser's Fury" contain it.
+  // listingTokenVariants() splits on " + " so DLC-bundle listings still match the base-game row.
+  const seps = [/–/, / - Nintendo/i, /NS ?\d/i, / Switch \d/i, /Redemption/i, /\[/, /\(Upgrade/i, / - Digital/i];
   let cut = t.length;
   for (const re of seps) {
     const m = t.search(re);
@@ -73,12 +74,13 @@ function cleanSheetTitle(t) {
   return (m >= 0 ? t.slice(0, m) : t).replace(/\s+/g, ' ').trim();
 }
 
-// Returns token variants for a listing: the full token set plus each "/" part separately.
-// Allows a "A / B" combo listing to match either the A row or the B row.
+// Returns token variants for a listing: the full token set plus each split-part separately.
+// Splits on "/" and " + " so combo listings (A / B) and DLC-bundle listings (Game + DLC)
+// can each match their respective sheet rows independently.
 function listingTokenVariants(name) {
   const full = tokens(name);
-  if (!name.includes('/')) return [full];
-  const parts = name.split('/').map(p => tokens(cleanListingName(p.trim()))).filter(t => t.length >= 2);
+  if (!name.includes('/') && !/ \+ /.test(name)) return [full];
+  const parts = name.split(/\/| \+ /).map(p => tokens(cleanListingName(p.trim()))).filter(t => t.length >= 2);
   return parts.length > 1 ? [full, ...parts] : [full];
 }
 
