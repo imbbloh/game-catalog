@@ -1,0 +1,20 @@
+# render.yaml — place at the ROOT of the imbbloh/game-catalog repo
+# (at the repo root, NOT inside bot/). Then in the NEW Render account:
+# New > Blueprint > pick this repo. You'll be prompted to paste the
+# secret values for BOT_TOKEN and WEBHOOK_URL.
+services:
+  - type: web
+    name: game-catalog
+    runtime: node
+    repo: https://github.com/imbbloh/game-catalog
+    branch: main
+    region: singapore
+    plan: free
+    rootDir: bot
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false   # set this to the NEW onrender.com URL after first deploy
