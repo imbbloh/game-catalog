@@ -64,11 +64,17 @@ function cleanListingName(t) {
   return t.slice(0, cut).replace(/\s+/g, ' ').trim();
 }
 
-// Applied to sheet titles — only strips the em-dash edition suffix (e.g. "– Nintendo Switch 2 Edition").
+// Applied to sheet titles — strips a trailing edition suffix (e.g. "– Nintendo
+// Switch 2 Edition" or "- Nintendo Switch 2 Edition") so the sheet row still
+// matches a seller's single generic listing that doesn't distinguish editions.
 // Does NOT apply listing-specific separators like " Switch \d" which would corrupt titles
 // like "Nintendo Switch 2 Welcome Tour".
 function cleanSheetTitle(t) {
   t = String(t);
+  // Strip "[– / - ]Nintendo Switch 2 Edition" however it's dashed (or not dashed
+  // at all) — the "2" in "Switch 2" would otherwise trip the numeric guard and
+  // block a match against the base game's listing.
+  t = t.replace(/\s*[–—-]?\s*(?:nintendo\s+)?switch\s*2\s*edition\s*$/i, '');
   const m = t.search(/–/);
   return (m >= 0 ? t.slice(0, m) : t).replace(/\s+/g, ' ').trim();
 }
