@@ -189,7 +189,12 @@ async function tryProductsSearch(session = '') {
       body,
     });
     console.log(`  products search status: ${res.status}`);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.log(`  server: ${res.headers.get('server')}, cf-ray: ${res.headers.get('cf-ray')}, cf-mitigated: ${res.headers.get('cf-mitigated')}`);
+      const text = await res.text().catch(() => '');
+      console.log(`  body (first 500 chars): ${text.slice(0, 500)}`);
+      return null;
+    }
     const ct = res.headers.get('content-type') || '';
     if (!ct.includes('json')) { console.log('  non-JSON'); return null; }
     return await res.json();
