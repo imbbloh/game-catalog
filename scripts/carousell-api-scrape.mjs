@@ -163,6 +163,42 @@ async function tryGraphQLGet() {
   return tryEndpoint(url);
 }
 
+// ── REST: the actual endpoint the profile page itself calls ──────────────────
+// POST .../ds/search/search/3.3/username/{user}/products/ — confirmed working
+// unauthenticated (logged-out incognito) via live DevTools inspection. Pagination
+// is a server-issued opaque "session" cursor: the first request seeds an empty
+// session, each response's data.session is echoed back as the next request's
+// session until data.results comes back empty.
+async function tryProductsSearch(session = '') {
+  const path = `/search/3.3/username/${USER}/products/`;
+  const url = `https://www.carousell.sg/ds/search${path}?_path=${encodeURIComponent(path)}&l=en`;
+  const body = JSON.stringify({
+    count: 20,
+    countryId: '1880251', // Singapore
+    filters: [],
+    isPreviewPage: false,
+    locale: 'en',
+    query: null,
+    session,
+    sortParam: { ascending: { value: false }, fieldName: 'time_created' },
+  });
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { ...headers, 'content-type': 'application/json' },
+      body,
+    });
+    console.log(`  products search status: ${res.status}`);
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') || '';
+    if (!ct.includes('json')) { console.log('  non-JSON'); return null; }
+    return await res.json();
+  } catch (e) {
+    console.log(`  error: ${e.message}`);
+    return null;
+  }
+}
+
 const listings = [];
 const seen = new Set();
 
@@ -179,9 +215,36 @@ function addListing(id, title, price, href) {
   });
 }
 
-// ── 1. Try GraphQL POST (GetUserProfileListings) ──────────────────────────────
+// ── 0. Try REST products search (the real endpoint the profile page uses) ────
 let gqlWorked = false;
 {
+  let session = '';
+  let page = 0;
+  while (page < 30) {
+    const data = await tryProductsSearch(session);
+    const results = data?.data?.results || [];
+    if (!results.length) break;
+    gqlWorked = true;
+    for (const r of results) {
+      const c = r.listingCard;
+      if (!c || !c.id) continue;
+      const id = String(c.id);
+      const title = c.title || '';
+      const raw = c.price;
+      const price = typeof raw === 'string' ? parseFloat(raw.replace(/[^0-9.]/g, '')) || null : null;
+      if (id && title) addListing(id, title, price, `/p/${id}/`);
+    }
+    const nextSession = data?.data?.session;
+    if (!nextSession || nextSession === session) break;
+    session = nextSession;
+    page++;
+    await new Promise(r => setTimeout(r, 300));
+  }
+  if (gqlWorked) console.log(`REST products search worked: ${listings.length} listings so far`);
+}
+
+// ── 1. Try GraphQL POST (GetUserProfileListings) ──────────────────────────────
+if (!gqlWorked) {
   let cursor = null;
   let page = 0;
   while (page < 20) {
