@@ -93,18 +93,19 @@ function isCode(listing) {
   return /DIGITAL CODE/i.test(listing.text) || /redemption-game-code|digital-code/i.test(listing.href || '');
 }
 
-// Whether a title/listing refers to an "upgrade pack" variant rather than the base
-// game — checked against the ORIGINAL (pre-clean) text, since cleanListingName()
-// strips "(Upgrade Pack)..." as a suffix separator, which would otherwise erase
-// this signal and let an upgrade-pack listing look identical to the base game.
-// The seller tags EVERY paid DLC code listing with a generic "(Upgrade Pack / DLC)"
-// bracket regardless of what kind of DLC it actually is (season pass, episode pack,
-// etc.) — that generic tag must be stripped first so it doesn't false-positive as
-// a genuine upgrade-pack product on every unrelated DLC listing.
-const UPGRADE_RE = /upgrade\s*pack/i;
-const GENERIC_DLC_TAG_RE = /\(\s*upgrade pack\s*\/\s*dlc\s*\)/i;
-function isUpgradePack(text) {
-  return UPGRADE_RE.test(String(text || '').replace(GENERIC_DLC_TAG_RE, ''));
+// Whether a title/listing refers to a DLC/add-on variant (upgrade pack, expansion
+// pass, season pass, etc.) rather than the base game — checked against the
+// ORIGINAL (pre-clean) text, since cleanListingName()'s separators would
+// otherwise cut the title right before this wording and erase the signal
+// (e.g. "...Breath of the Wild Expansion Pass Nintendo Switch 1..." gets cut
+// at " Switch 1", hiding "Expansion Pass" from the cleaned name). The seller
+// tags EVERY paid DLC code listing with a bracket containing "Upgrade Pack"
+// and/or "DLC" regardless of the specific sub-type (season pass, episode
+// pack, etc.) — that bracket alone is a reliable signal, so no stripping is
+// needed here; a base-game listing simply never carries it.
+const DLC_VARIANT_RE = /\bdlc\b|upgrade\s*pack|expansion\s*pass|expansion\s*pack|season\s*pass|ultimate\s*pass|character\s*pass|content\s*pack|bonus\s*pack|dlc\s*pack|story\s*pack|add-on\s*pass|\bpass\s*vol|\bpack\s*vol/i;
+function isDlcVariant(text) {
+  return DLC_VARIANT_RE.test(String(text || ''));
 }
 
 // ── Platform detection ────────────────────────────────────────────────────────
@@ -147,7 +148,7 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
   const stSet = new Set(st);
   // tokens that appear in OTHER rows but not this row's title
   const otherRowToks = new Set([...allSheetToks].filter(t => !stSet.has(t)));
-  const sheetIsUpgrade = isUpgradePack(sheetTitle);
+  const sheetIsDlc = isDlcVariant(sheetTitle);
 
   const eligible = [];
   for (const c of candidates) {
@@ -155,7 +156,7 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
     if (/^bumped$/i.test(c.name)) continue;                       // seller bump placeholder
     const lp = listingPlatform(c.text);  // use original text — platform info is often after the separator
     if (!platformsCompatible(lp, sheetPlat)) continue;            // platform mismatch
-    if (isUpgradePack(c.text) !== sheetIsUpgrade) continue;       // upgrade-pack listings only match upgrade-pack rows, and vice versa
+    if (isDlcVariant(c.text) !== sheetIsDlc) continue;            // DLC/add-on listings only match DLC/add-on rows, and vice versa
 
     // Try full token set and each "/" part (combo listings like "A / B" can match either row)
     let bestVariant = null;
