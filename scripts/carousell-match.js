@@ -228,17 +228,35 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
     return eligible;
   }
 
-  // A DLC/add-on sheet row first tries to match a same-type DLC listing; if none
-  // exists yet on Carousell, fall back to the base game's own listing (using a
-  // recovered base-game title) rather than leaving the row unmatched. A
-  // base-game sheet row never falls back the other way — it should never end
-  // up pointing at a DLC/add-on listing.
+  // Same-type match is always tried first (a DLC row against a DLC listing, a
+  // base row against a base listing). If nothing of that type exists yet on
+  // Carousell, fall back to the other type rather than leaving the row
+  // unmatched — a related listing (even the wrong variant) is more useful than
+  // a blank cell, and the seller only has one Carousell listing for many games
+  // right now regardless of edition/DLC.
   let eligible = findEligible(sheetTitle, sheetIsDlc);
   if (!eligible.length && sheetIsDlc) {
     for (const baseTitle of baseTitleCandidates(sheetTitle)) {
       eligible = findEligible(baseTitle, false);
       if (eligible.length) break;
     }
+  }
+  // A base-game row falling back to a DLC-tagged listing (no true base listing
+  // exists yet) picks the HIGHEST-priced eligible candidate, not the closest-
+  // price/shortest-name default. Confirmed against real picks across multiple
+  // titles (Smash Bros, BOTW, Tears of the Kingdom, Mario Wonder): a cheap
+  // "plain-titled" DIGITAL CODE listing ($12-20) turned out to be a mislabeled/
+  // stale entry, while the pricier, fully-tagged listing ($60-70) was the
+  // genuine one — real Nintendo eShop codes in this data consistently run
+  // $50+, so an outlier this cheap is a red flag, not a better match.
+  if (!eligible.length && !sheetIsDlc) {
+    eligible = findEligible(sheetTitle, true);
+    // Price leads here (not "exact" match quality) — a cheap listing that
+    // happens to clean up to an exact token match is exactly the mislabeled/
+    // stale case this branch needs to avoid; the real listing is reliably
+    // the pricier one, exact match or not.
+    eligible.sort((a, b) => (b.c.price ?? -1) - (a.c.price ?? -1));
+    return eligible[0] || null;
   }
 
   eligible.sort((a, b) =>
