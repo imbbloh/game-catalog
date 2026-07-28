@@ -26,6 +26,11 @@ function tokens(s) {
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[™®'’]/g, '')
     .replace(/&/g, ' and ')
+    // Unwrap "(DLC: Pack Name)" to keep the pack name — some listings bundle the
+    // actual DLC name inside the same parens as the "DLC:" label (e.g. "(DLC: The
+    // Order of Giants)"), which the generic paren-strip below would otherwise
+    // erase entirely, losing the only tokens that distinguish this DLC from others.
+    .replace(/\(dlc:\s*([^)]+)\)/gi, ' $1 ')
     .replace(/\([^)]*\)/g, ' ')
     .split(/[^a-z0-9]+/).filter(Boolean)
     .map(t => ROMAN[t] || t)
