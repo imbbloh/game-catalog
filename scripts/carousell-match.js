@@ -93,6 +93,15 @@ function isCode(listing) {
   return /DIGITAL CODE/i.test(listing.text) || /redemption-game-code|digital-code/i.test(listing.href || '');
 }
 
+// Whether a title/listing refers to an "upgrade pack" variant rather than the base
+// game — checked against the ORIGINAL (pre-clean) text, since cleanListingName()
+// strips "(Upgrade Pack)..." as a suffix separator, which would otherwise erase
+// this signal and let an upgrade-pack listing look identical to the base game.
+const UPGRADE_RE = /upgrade\s*pack/i;
+function isUpgradePack(text) {
+  return UPGRADE_RE.test(String(text || ''));
+}
+
 // ── Platform detection ────────────────────────────────────────────────────────
 // Returns a canonical platform tag from a Carousell listing name
 function listingPlatform(name) {
@@ -133,6 +142,7 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
   const stSet = new Set(st);
   // tokens that appear in OTHER rows but not this row's title
   const otherRowToks = new Set([...allSheetToks].filter(t => !stSet.has(t)));
+  const sheetIsUpgrade = isUpgradePack(sheetTitle);
 
   const eligible = [];
   for (const c of candidates) {
@@ -140,6 +150,7 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
     if (/^bumped$/i.test(c.name)) continue;                       // seller bump placeholder
     const lp = listingPlatform(c.text);  // use original text — platform info is often after the separator
     if (!platformsCompatible(lp, sheetPlat)) continue;            // platform mismatch
+    if (isUpgradePack(c.text) !== sheetIsUpgrade) continue;       // upgrade-pack listings only match upgrade-pack rows, and vice versa
 
     // Try full token set and each "/" part (combo listings like "A / B" can match either row)
     let bestVariant = null;
