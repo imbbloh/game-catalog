@@ -93,18 +93,52 @@ function isCode(listing) {
   return /DIGITAL CODE/i.test(listing.text) || /redemption-game-code|digital-code/i.test(listing.href || '');
 }
 
-// Whether a title/listing refers to an "upgrade pack" variant rather than the base
-// game — checked against the ORIGINAL (pre-clean) text, since cleanListingName()
-// strips "(Upgrade Pack)..." as a suffix separator, which would otherwise erase
-// this signal and let an upgrade-pack listing look identical to the base game.
-// The seller tags EVERY paid DLC code listing with a generic "(Upgrade Pack / DLC)"
-// bracket regardless of what kind of DLC it actually is (season pass, episode pack,
-// etc.) — that generic tag must be stripped first so it doesn't false-positive as
-// a genuine upgrade-pack product on every unrelated DLC listing.
-const UPGRADE_RE = /upgrade\s*pack/i;
-const GENERIC_DLC_TAG_RE = /\(\s*upgrade pack\s*\/\s*dlc\s*\)/i;
-function isUpgradePack(text) {
-  return UPGRADE_RE.test(String(text || '').replace(GENERIC_DLC_TAG_RE, ''));
+// Whether a title/listing refers to a DLC/add-on variant (upgrade pack, expansion
+// pass, season pass, etc.) rather than the base game — checked against the
+// ORIGINAL (pre-clean) text, since cleanListingName()'s separators would
+// otherwise cut the title right before this wording and erase the signal
+// (e.g. "...Breath of the Wild Expansion Pass Nintendo Switch 1..." gets cut
+// at " Switch 1", hiding "Expansion Pass" from the cleaned name). The seller
+// tags EVERY paid DLC code listing with a bracket containing "Upgrade Pack"
+// and/or "DLC" regardless of the specific sub-type (season pass, episode
+// pack, etc.) — that bracket alone is a reliable signal, so no stripping is
+// needed here; a base-game listing simply never carries it.
+const DLC_VARIANT_RE = /\bdlc\b|upgrade\s*pack|expansion\s*pass|expansion\s*pack|season\s*pass|ultimate\s*pass|character\s*pass|content\s*pack|bonus\s*pack|dlc\s*pack|story\s*pack|add-on\s*pass|\bpass\s*vol|\bpack\s*vol/i;
+function isDlcVariant(text) {
+  return DLC_VARIANT_RE.test(String(text || ''));
+}
+
+// Recovers candidate base-game titles from a DLC-titled sheet row, for the
+// fallback match when no same-type DLC listing exists yet. Splits on a known
+// DLC marker phrase FIRST (not colon/dash first, unlike the eShop URL resolver
+// in code.gs) — a base title can itself contain a colon or dash (e.g. "Animal
+// Crossing: New Horizons"), so cutting there first would wrongly truncate to
+// just "Animal Crossing". Cutting at the marker phrase instead preserves the
+// base title intact and only strips the DLC-specific portion.
+const DLC_MARKER_PHRASES = [
+  'expansion pass', 'season pass', 'ultimate pass', 'upgrade pack', 'content pack',
+  'character pass', 'bonus pack', 'dlc pack', 'story pack',
+  'pass vol', 'pack vol', 'add-on pass', 'expansion pack',
+];
+function baseTitleCandidates(dlcTitle) {
+  const t = String(dlcTitle).replace(/\s*\(dlc\)\s*$/i, '').trim();
+  const candidates = [];
+
+  DLC_MARKER_PHRASES.forEach(phrase => {
+    const re = new RegExp('(?:year\\s+\\d+\\s+|vol\\.?\\s*\\d+\\s+)?' + phrase, 'i');
+    const m = t.match(re);
+    if (m && m.index > 0) candidates.push(t.slice(0, m.index).replace(/[\s(:–—-]+$/, '').trim());
+  });
+
+  const forMatch = t.match(/^(.*?)\s+DLC\s+for\s+(.+)$/i);
+  if (forMatch) candidates.push(forMatch[2].trim());
+
+  [/:\s*/, /\s+–\s+/, /\s+-\s+/].forEach(sep => {
+    const parts = t.split(sep);
+    if (parts.length >= 2) candidates.push(parts[0].trim());
+  });
+
+  return candidates.filter(Boolean);
 }
 
 // ── Platform detection ────────────────────────────────────────────────────────
@@ -142,43 +176,64 @@ function platformsCompatible(lp, spSet) {
 // "Super Mario Party Jamboree" but not in "Super Mario Party", so it's a row-exclusive
 // token that should block a contained match for the base row).
 function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks = new Set()) {
-  const st = tokens(cleanSheetTitle(sheetTitle));
-  const sn = numSet(st);
-  const stSet = new Set(st);
-  // tokens that appear in OTHER rows but not this row's title
-  const otherRowToks = new Set([...allSheetToks].filter(t => !stSet.has(t)));
-  const sheetIsUpgrade = isUpgradePack(sheetTitle);
+  const sheetIsDlc = isDlcVariant(sheetTitle);
 
-  const eligible = [];
-  for (const c of candidates) {
-    if (/\bSOLD\b/i.test(c.text)) continue;                       // sold items
-    if (/^bumped$/i.test(c.name)) continue;                       // seller bump placeholder
-    const lp = listingPlatform(c.text);  // use original text — platform info is often after the separator
-    if (!platformsCompatible(lp, sheetPlat)) continue;            // platform mismatch
-    if (isUpgradePack(c.text) !== sheetIsUpgrade) continue;       // upgrade-pack listings only match upgrade-pack rows, and vice versa
+  // titleForTokens lets the fallback pass (below) re-derive tokens from a
+  // stripped-down base-game title instead of the original DLC-titled sheet
+  // title — otherwise leftover words like "expansion"/"pass" would still be
+  // compared against a plain base-game listing that never carries them.
+  function findEligible(titleForTokens, requireDlc) {
+    const st = tokens(cleanSheetTitle(titleForTokens));
+    const sn = numSet(st);
+    const stSet = new Set(st);
+    // tokens that appear in OTHER rows but not this row's title
+    const otherRowToks = new Set([...allSheetToks].filter(t => !stSet.has(t)));
 
-    // Try full token set and each "/" part (combo listings like "A / B" can match either row)
-    let bestVariant = null;
-    for (const lt of listingTokenVariants(c.name)) {
-      // Numeric guard: every number in the sheet title must appear in the listing.
-      // The listing may carry extra numbers (search keywords like "FIFA 2026", "RE 9",
-      // "Galaxy 1+2") — those count toward `extra` so a cleaner listing still wins.
-      const ln = numSet(lt);
-      if (![...sn].every(n => ln.has(n))) continue;
-      const ltSet = new Set(lt);
-      const exact = st.length === lt.length && st.every((t, i) => t === lt[i]);
-      const extraToks = [...ltSet].filter(t => !stSet.has(t));
-      // contained passes unless an extra token is a VARIANT word OR a keyword that
-      // appears exclusively in another row's title (e.g. "jamboree" → wrong game)
-      const containedPass = [...stSet].every(t => ltSet.has(t)) &&
-        extraToks.every(t => VARIANT.has(t) || /^\d+$/.test(t) || t.length < 6 || !otherRowToks.has(t));
-      const jac = jaccard(st, lt);
-      if (!(exact || containedPass || jac >= 0.82)) continue;
-      let extra = 0;
-      for (const t of ltSet) if (!stSet.has(t)) extra += VARIANT.has(t) ? 1.5 : 1;
-      if (!bestVariant || exact || jac > bestVariant.jac) bestVariant = { exact, extra, jac };
+    const eligible = [];
+    for (const c of candidates) {
+      if (/\bSOLD\b/i.test(c.text)) continue;                       // sold items
+      if (/^bumped$/i.test(c.name)) continue;                       // seller bump placeholder
+      const lp = listingPlatform(c.text);  // use original text — platform info is often after the separator
+      if (!platformsCompatible(lp, sheetPlat)) continue;            // platform mismatch
+      if (isDlcVariant(c.text) !== requireDlc) continue;            // DLC/add-on listings only match DLC/add-on rows, and vice versa
+
+      // Try full token set and each "/" part (combo listings like "A / B" can match either row)
+      let bestVariant = null;
+      for (const lt of listingTokenVariants(c.name)) {
+        // Numeric guard: every number in the sheet title must appear in the listing.
+        // The listing may carry extra numbers (search keywords like "FIFA 2026", "RE 9",
+        // "Galaxy 1+2") — those count toward `extra` so a cleaner listing still wins.
+        const ln = numSet(lt);
+        if (![...sn].every(n => ln.has(n))) continue;
+        const ltSet = new Set(lt);
+        const exact = st.length === lt.length && st.every((t, i) => t === lt[i]);
+        const extraToks = [...ltSet].filter(t => !stSet.has(t));
+        // contained passes unless an extra token is a VARIANT word OR a keyword that
+        // appears exclusively in another row's title (e.g. "jamboree" → wrong game)
+        const containedPass = [...stSet].every(t => ltSet.has(t)) &&
+          extraToks.every(t => VARIANT.has(t) || /^\d+$/.test(t) || t.length < 6 || !otherRowToks.has(t));
+        const jac = jaccard(st, lt);
+        if (!(exact || containedPass || jac >= 0.82)) continue;
+        let extra = 0;
+        for (const t of ltSet) if (!stSet.has(t)) extra += VARIANT.has(t) ? 1.5 : 1;
+        if (!bestVariant || exact || jac > bestVariant.jac) bestVariant = { exact, extra, jac };
+      }
+      if (bestVariant) eligible.push({ c, ...bestVariant });
     }
-    if (bestVariant) eligible.push({ c, ...bestVariant });
+    return eligible;
+  }
+
+  // A DLC/add-on sheet row first tries to match a same-type DLC listing; if none
+  // exists yet on Carousell, fall back to the base game's own listing (using a
+  // recovered base-game title) rather than leaving the row unmatched. A
+  // base-game sheet row never falls back the other way — it should never end
+  // up pointing at a DLC/add-on listing.
+  let eligible = findEligible(sheetTitle, sheetIsDlc);
+  if (!eligible.length && sheetIsDlc) {
+    for (const baseTitle of baseTitleCandidates(sheetTitle)) {
+      eligible = findEligible(baseTitle, false);
+      if (eligible.length) break;
+    }
   }
 
   eligible.sort((a, b) =>
