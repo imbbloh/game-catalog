@@ -97,9 +97,14 @@ function isCode(listing) {
 // game — checked against the ORIGINAL (pre-clean) text, since cleanListingName()
 // strips "(Upgrade Pack)..." as a suffix separator, which would otherwise erase
 // this signal and let an upgrade-pack listing look identical to the base game.
+// The seller tags EVERY paid DLC code listing with a generic "(Upgrade Pack / DLC)"
+// bracket regardless of what kind of DLC it actually is (season pass, episode pack,
+// etc.) — that generic tag must be stripped first so it doesn't false-positive as
+// a genuine upgrade-pack product on every unrelated DLC listing.
 const UPGRADE_RE = /upgrade\s*pack/i;
+const GENERIC_DLC_TAG_RE = /\(\s*upgrade pack\s*\/\s*dlc\s*\)/i;
 function isUpgradePack(text) {
-  return UPGRADE_RE.test(String(text || ''));
+  return UPGRADE_RE.test(String(text || '').replace(GENERIC_DLC_TAG_RE, ''));
 }
 
 // ── Platform detection ────────────────────────────────────────────────────────
