@@ -344,6 +344,7 @@ const cell = (row, i) => {
 
   const report = ['sheet,row,title,status,carousell_url,listing_title'];
   const esc = s => /[",\n]/.test(s) ? '"' + String(s).replace(/"/g, '""') + '"' : s;
+  const matchedUrls = new Set(); // tracks every listing claimed by some sheet row, across both tabs
 
   for (const [kind, cfg] of Object.entries(TABS)) {
     const table = await fetchTab(cfg.tab);
@@ -375,6 +376,7 @@ const cell = (row, i) => {
       if (m) {
         out.push(m.c.url);
         matched++;
+        matchedUrls.add(m.c.url);
         report.push([cfg.tab, i + 2, esc(title), m.exact ? 'matched (exact)' : 'matched — VERIFY', m.c.url, esc(m.c.name)].join(','));
       } else {
         out.push('');
@@ -390,6 +392,20 @@ const cell = (row, i) => {
 
   fs.writeFileSync('carousell-urls.csv', report.join('\n') + '\n');
   console.log('Wrote carousell-urls.csv report');
+
+  // Listings that exist on Carousell but no sheet row claimed — either a new
+  // listing not yet added to the sheet, or a real match the sheet-title side
+  // is failing to find (worth checking against carousell-urls.csv "no match"
+  // rows above).
+  const unmatchedReport = ['type,carousell_url,price,listing_title'];
+  for (const [kind, entries] of Object.entries(pool)) {
+    for (const c of entries) {
+      if (matchedUrls.has(c.url)) continue;
+      unmatchedReport.push([kind, c.url, c.price ?? '', esc(c.name)].join(','));
+    }
+  }
+  fs.writeFileSync('carousell-unmatched-listings.csv', unmatchedReport.join('\n') + '\n');
+  console.log(`Wrote carousell-unmatched-listings.csv (${unmatchedReport.length - 1} unclaimed listings)`);
 
   // Machine-readable matches for the Apps Script daily sync.
   // Keyed by 1-based sheet row number so duplicate titles don't overwrite each other.
