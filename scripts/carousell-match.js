@@ -109,8 +109,13 @@ function isCode(listing) {
 // pack, etc.) — that bracket alone is a reliable signal, so no stripping is
 // needed here; a base-game listing simply never carries it.
 const DLC_VARIANT_RE = /\bdlc\b|upgrade\s*pack|expansion\s*pass|expansion\s*pack|season\s*pass|ultimate\s*pass|character\s*pass|content\s*pack|bonus\s*pack|dlc\s*pack|story\s*pack|add-on\s*pass|\bpass\s*vol|\bpack\s*vol/i;
+// "(DLC Included)" means the opposite of what it sounds like here — it marks a
+// COMPLETE listing (base game + DLC bundled into the same code), not a
+// standalone DLC/add-on product — so it's stripped before testing, otherwise
+// it would wrongly exclude the correct base-game listing from a plain title.
+const DLC_INCLUDED_RE = /\(?\s*dlc\s+included\s*\)?/i;
 function isDlcVariant(text) {
-  return DLC_VARIANT_RE.test(String(text || ''));
+  return DLC_VARIANT_RE.test(String(text || '').replace(DLC_INCLUDED_RE, ''));
 }
 
 // Recovers candidate base-game titles from a DLC-titled sheet row, for the
@@ -187,12 +192,17 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
   // stripped-down base-game title instead of the original DLC-titled sheet
   // title — otherwise leftover words like "expansion"/"pass" would still be
   // compared against a plain base-game listing that never carries them.
-  function findEligible(titleForTokens, requireDlc) {
+  function findEligible(titleForTokens, requireDlc, relaxOtherRow = false) {
     const st = tokens(cleanSheetTitle(titleForTokens));
     const sn = numSet(st);
     const stSet = new Set(st);
-    // tokens that appear in OTHER rows but not this row's title
-    const otherRowToks = new Set([...allSheetToks].filter(t => !stSet.has(t)));
+    // tokens that appear in OTHER rows but not this row's title. Skipped
+    // (relaxOtherRow) for the DLC<->base fallback passes: a sibling DLC row's
+    // own pack name (e.g. "The Order of Giants") legitimately contributes
+    // words like "giants" to allSheetToks, which would otherwise wrongly look
+    // like contamination from a totally different game and block the fallback
+    // match to that same game's own listing.
+    const otherRowToks = relaxOtherRow ? new Set() : new Set([...allSheetToks].filter(t => !stSet.has(t)));
 
     const eligible = [];
     for (const c of candidates) {
@@ -214,9 +224,13 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
         const exact = st.length === lt.length && st.every((t, i) => t === lt[i]);
         const extraToks = [...ltSet].filter(t => !stSet.has(t));
         // contained passes unless an extra token is a VARIANT word OR a keyword that
-        // appears exclusively in another row's title (e.g. "jamboree" → wrong game)
+        // appears exclusively in another row's title (e.g. "jamboree" → wrong game).
+        // An extra NUMBER never gets an unconditional pass here (unlike short/
+        // VARIANT words) — it must still clear the otherRowToks check, since a
+        // sequel number (e.g. "2" in "Moving Out 2") is exactly the kind of
+        // digit that would otherwise let a base title wrongly match its sequel.
         const containedPass = [...stSet].every(t => ltSet.has(t)) &&
-          extraToks.every(t => VARIANT.has(t) || /^\d+$/.test(t) || t.length < 6 || !otherRowToks.has(t));
+          extraToks.every(t => VARIANT.has(t) || (!/^\d+$/.test(t) && t.length < 6) || !otherRowToks.has(t));
         const jac = jaccard(st, lt);
         if (!(exact || containedPass || jac >= 0.82)) continue;
         let extra = 0;
@@ -237,7 +251,7 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
   let eligible = findEligible(sheetTitle, sheetIsDlc);
   if (!eligible.length && sheetIsDlc) {
     for (const baseTitle of baseTitleCandidates(sheetTitle)) {
-      eligible = findEligible(baseTitle, false);
+      eligible = findEligible(baseTitle, false, true);
       if (eligible.length) break;
     }
   }
@@ -250,7 +264,7 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
   // genuine one — real Nintendo eShop codes in this data consistently run
   // $50+, so an outlier this cheap is a red flag, not a better match.
   if (!eligible.length && !sheetIsDlc) {
-    eligible = findEligible(sheetTitle, true);
+    eligible = findEligible(sheetTitle, true, true);
     // Price leads here (not "exact" match quality) — a cheap listing that
     // happens to clean up to an exact token match is exactly the mislabeled/
     // stale case this branch needs to avoid; the real listing is reliably
