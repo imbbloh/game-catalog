@@ -18,6 +18,7 @@ const TABS = {
 
 // ── Normalization (mirrors the matching spec) ────────────────────────────────
 const ROMAN  = { ii: '2', iii: '3', iv: '4', vi: '6', vii: '7', viii: '8', ix: '9', xi: '11', xii: '12', xiii: '13' };
+const NUMWORD = { one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9', ten: '10' };
 const FILLER = new Set(['nintendo', 'switch', 'edition', 'the', 'and', 'for']);
 const VARIANT = new Set(['bundle', 'expansion', 'pass', 'dlc', 'deluxe', 'ultimate', 'edition', 'digital']);
 
@@ -33,7 +34,7 @@ function tokens(s) {
     .replace(/\(dlc:\s*([^)]+)\)/gi, ' $1 ')
     .replace(/\([^)]*\)/g, ' ')
     .split(/[^a-z0-9]+/).filter(Boolean)
-    .map(t => ROMAN[t] || t)
+    .map(t => ROMAN[t] || NUMWORD[t] || t)
     .filter(t => !FILLER.has(t));
 }
 
@@ -229,8 +230,27 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
         // VARIANT words) — it must still clear the otherRowToks check, since a
         // sequel number (e.g. "2" in "Moving Out 2") is exactly the kind of
         // digit that would otherwise let a base title wrongly match its sequel.
+        // Exceptions to the strict-number rule:
+        //  - a bare number that's just a decomposed suffix of a token the
+        //    sheet title ALREADY has (e.g. listing writes "2K 26" as two
+        //    tokens where the sheet's own "2k26" is one token) isn't foreign —
+        //    it's the same edition marker, just spaced differently.
+        //  - a 4-digit YEAR (e.g. "2026" as a search-boost keyword on an
+        //    annual sports/rhythm title) is expected to recur across many
+        //    unrelated titles in the same catalog year, so it isn't a
+        //    reliable "this belongs to a different game" signal the way a
+        //    short sequel number is — this was the original documented intent
+        //    ("FIFA 2026") before the sequel-number fix over-tightened it.
         const containedPass = [...stSet].every(t => ltSet.has(t)) &&
-          extraToks.every(t => VARIANT.has(t) || (!/^\d+$/.test(t) && t.length < 6) || !otherRowToks.has(t));
+          extraToks.every(t => {
+            if (VARIANT.has(t)) return true;
+            if (/^\d+$/.test(t)) {
+              if (t.length === 4 && Number(t) >= 1990 && Number(t) <= 2099) return true;
+              if ([...stSet].some(s => s !== t && /\d/.test(s) && s.endsWith(t))) return true;
+              return !otherRowToks.has(t);
+            }
+            return t.length < 6 || !otherRowToks.has(t);
+          });
         const jac = jaccard(st, lt);
         if (!(exact || containedPass || jac >= 0.82)) continue;
         let extra = 0;
