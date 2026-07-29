@@ -293,10 +293,16 @@ function bestMatch(sheetTitle, sheetPrice, sheetPlat, candidates, allSheetToks =
     return eligible[0] || null;
   }
 
+  // Price proximity to the sheet's own listed price is checked before the
+  // "extra" token count — a candidate with fewer extra words isn't
+  // necessarily the right one among several genuine DLC listings for the
+  // same pack (e.g. a generic "Expansion Pass" listing vs. a specific
+  // "Bubbly Basin" chapter of it) — the sheet's own price is a much more
+  // direct disambiguator than counting words.
   eligible.sort((a, b) =>
     (b.exact - a.exact)
-    || (a.extra - b.extra)
     || (priceDiff(a.c, sheetPrice) - priceDiff(b.c, sheetPrice))
+    || (a.extra - b.extra)
     || (a.c.name.length - b.c.name.length));
   return eligible[0] || null;
 }
