@@ -968,16 +968,22 @@ function makeCard(game) {
   var card = document.createElement('div');
   card.className = 'game-card tint-' + pc;
 
-  // ── cover ──
-  var coverWrap = document.createElement('div');
-  coverWrap.className = 'cover-wrap';
-  if (carousellUrl) {
-    coverWrap.style.cursor = 'pointer';
-    coverWrap.addEventListener('click', function(e) {
+  // Opens the Carousell listing. Applied to the cover and to the body, so the
+  // title and prices are clickable too — everything bar the footer's store
+  // link, which stops propagation and goes to the publisher's store instead.
+  function linkToCarousell(el) {
+    if (!carousellUrl) return;
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', function(e) {
       e.stopPropagation();
       window.open(carousellUrl, '_blank', 'noopener');
     });
   }
+
+  // ── cover ──
+  var coverWrap = document.createElement('div');
+  coverWrap.className = 'cover-wrap';
+  linkToCarousell(coverWrap);
 
   // Placeholder (always shown until image is ready)
   var ph = document.createElement('div');
@@ -1018,17 +1024,11 @@ function makeCard(game) {
   // ── body ──
   var body = document.createElement('div');
   body.className = 'card-body';
+  linkToCarousell(body);   // covers the title, the prices and the space between
 
   var titleEl = document.createElement('div');
   titleEl.className = 'card-title';
   titleEl.textContent = game.title;
-  if (carousellUrl) {
-    titleEl.style.cursor = 'pointer';
-    titleEl.addEventListener('click', function(e) {
-      e.stopPropagation();
-      window.open(carousellUrl, '_blank', 'noopener');
-    });
-  }
   body.appendChild(titleEl);
 
   var pricesEl = document.createElement('div');
