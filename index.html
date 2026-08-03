@@ -215,13 +215,15 @@ header {
    a shelf reads red or blue at a glance while the surface stays neutral.
    Declared before :hover so the gold hover border still wins — equal
    specificity, later rule takes it. Code and unknown cards stay neutral. */
-.game-card.tint-ns { border-color: #c9182b; }
-.game-card.tint-ps { border-color: #1f6fd0; }
+.game-card.tint-ns { border-color: #ff1f3d; box-shadow: 0 0 9px rgba(255,31,61,.38), inset 0 0 6px rgba(255,31,61,.13); }
+.game-card.tint-ps { border-color: #00a6ff; box-shadow: 0 0 9px rgba(0,166,255,.38), inset 0 0 6px rgba(0,166,255,.13); }
 
 .game-card:hover {
   border-color: var(--accent);
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  /* Hover swaps the platform glow for a gold one rather than dropping it —
+     otherwise the hovered card is the only unlit one in the grid. */
+  box-shadow: 0 0 12px rgba(240,193,64,.45), 0 8px 28px rgba(0,0,0,.45);
 }
 
 /* ── Cover ── */
