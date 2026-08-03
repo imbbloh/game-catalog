@@ -54,23 +54,21 @@ header {
 }
 
 .logo-icon {
-  width: 38px; height: 38px; border-radius: 10px;
-  flex-shrink: 0; display: block; overflow: hidden;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  width: 42px; height: 42px;
+  flex-shrink: 0; display: block;
 }
 
-/* The mascot PNG carries a wide transparent margin and sits a touch high and
-   right of centre, so it's recentred and scaled up until the artwork fills the
-   tile, with the empty margin clipped away. Tune --logo-zoom to crop tighter
-   or looser. */
+/* The mascot art is transparent and sits inside a wide empty margin, a touch
+   high and right of centre. Recentre it and scale up so it reads at header
+   size — nothing is clipped, so the silhouette sits straight on the page
+   background with no tile behind it. Tune --logo-zoom to taste. */
 .logo-icon img {
   width: 100%; height: 100%;
   object-fit: contain;
-  transform: translate(-3%, 4.5%) scale(var(--logo-zoom, 1.28));
+  transform: translate(-3%, 4.5%) scale(var(--logo-zoom, 1.4));
 }
 /* the SVG fallback is already cropped to its content — don't zoom it again */
-.logo-icon img.is-svg { transform: none; padding: 2px; }
+.logo-icon img.is-svg { transform: none; }
 
 .logo-text h1 {
   font-family: 'Syne', sans-serif; font-weight: 800;
