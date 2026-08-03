@@ -1021,7 +1021,7 @@ function makeCard(game) {
     pricesEl.appendChild(pRow('🟡 Normal',  '$' + game.normalPrice.toFixed(2),  'pv-n'));
     pricesEl.appendChild(pRow('🟢 Premium', '$' + game.premiumPrice.toFixed(2), 'pv-p'));
   } else if (game.codePrice !== null) {
-    pricesEl.appendChild(pRow('💰 Price', '$' + game.codePrice.toFixed(2), 'pv-s'));
+    pricesEl.appendChild(pRow('🔑 Price', '$' + game.codePrice.toFixed(2), 'pv-s'));
   } else if (game.normalPrice !== null) {
     pricesEl.appendChild(pRow('From', '$' + game.normalPrice.toFixed(2), 'pv-n'));
   } else if (game.premiumPrice !== null) {
