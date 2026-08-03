@@ -938,6 +938,14 @@ function platClass(g) {
   return 'unk';
 }
 
+// Footer link text per platform. Codes are eShop redemptions, so they point at
+// the eShop like Switch cards do.
+var STORE_LABEL = {
+  ns:   'View EShop ↗',
+  ps:   'View PS Store ↗',
+  code: 'View EShop ↗',
+};
+
 // ── Render one card ─────────────────────────────────────────────────────────
 function makeCard(game) {
   var pc       = platClass(game);
@@ -1046,7 +1054,8 @@ function makeCard(game) {
     footer.className = 'card-footer';
     var a = document.createElement('a');
     a.href = fullUrl; a.target = '_blank'; a.rel = 'noopener';
-    a.className = 'view-link'; a.textContent = 'View Store ↗';
+    // Name the destination store per platform; unknown platforms stay generic.
+    a.className = 'view-link'; a.textContent = STORE_LABEL[pc] || 'View Store ↗';
     a.addEventListener('click', function(e) { e.stopPropagation(); });
     footer.appendChild(a);
     card.appendChild(footer);
