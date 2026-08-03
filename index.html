@@ -1290,8 +1290,32 @@ document.getElementById('sortSelect').addEventListener('change', function(e) {
   render();
 });
 
-var FILTER_HASH = { ns: '#nintendo', ps: '#playstation', code: '#codes', all: '' };
-var HASH_FILTER = { '#nintendo': 'ns', '#playstation': 'ps', '#codes': 'code' };
+var FILTER_HASH = { ns: 'nintendo', ps: 'playstation', code: 'codes', all: '' };
+var HASH_FILTER = { nintendo: 'ns', playstation: 'ps', codes: 'code' };
+
+// Sub-filters extend the platform hash: "#nintendo_switch1", "#codes_upgradepack".
+var SUB_HASH = { sw1: 'switch1', sw2: 'switch2', ps4: 'ps4', ps5: 'ps5', upg: 'upgradepack', dlc: 'dlc' };
+// Which platform each sub-filter belongs to, so a mismatched URL like
+// "#nintendo_ps5" drops the sub rather than filtering to nothing.
+var SUB_OF = { sw1: 'ns', sw2: 'ns', ps4: 'ps', ps5: 'ps', upg: 'code', dlc: 'code' };
+
+function hashFor(f, sub) {
+  var base = FILTER_HASH[f] || '';
+  if (!base) return '';
+  return '#' + base + (sub && SUB_HASH[sub] ? '_' + SUB_HASH[sub] : '');
+}
+
+function parseHash(h) {
+  var parts = String(h || '').replace(/^#/, '').toLowerCase().split('_');
+  var f = HASH_FILTER[parts[0]] || 'all';
+  var sub = null;
+  if (parts[1]) {
+    for (var k in SUB_HASH) {
+      if (SUB_HASH[k] === parts[1] && SUB_OF[k] === f) { sub = k; break; }
+    }
+  }
+  return [f, sub];
+}
 
 function applyFilter(f, sub) {
   curFilter = f || 'all';
@@ -1302,7 +1326,7 @@ function applyFilter(f, sub) {
   document.querySelectorAll('.pill-opt').forEach(function(o) {
     o.classList.toggle('on', curSub !== null && o.dataset.sub === curSub);
   });
-  var hash = FILTER_HASH[curFilter] || '';
+  var hash = hashFor(curFilter, curSub);
   history.replaceState(null, '', hash || location.pathname);
   render();
 }
@@ -1337,7 +1361,13 @@ document.addEventListener('click', function(e) {
 });
 
 // Apply filter from URL hash on load
-applyFilter(HASH_FILTER[location.hash] || 'all');
+applyFilter.apply(null, parseHash(location.hash));
+
+// Follow the hash if it's edited directly or navigated to. replaceState above
+// doesn't fire this, so there's no feedback loop.
+window.addEventListener('hashchange', function() {
+  applyFilter.apply(null, parseHash(location.hash));
+});
 </script>
 </body>
 </html>
