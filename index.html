@@ -1049,6 +1049,17 @@ var curFilter = 'all';
 var curSearch = '';
 var curSort   = 'name';
 
+// Fold a title or query down to bare lowercase words: accents dropped and every
+// run of punctuation collapsed to a single space, so "Pokémon", "pokemon" and
+// "Pokemon:" all compare equal and a stray colon or apostrophe in the query
+// can't stop a match.
+function searchNorm(s) {
+  return String(s).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 function getFiltered() {
   var list = allGames;
 
@@ -1057,8 +1068,17 @@ function getFiltered() {
   if (curFilter === 'code') list = list.filter(function(g) { return g.type === 'code'; });
 
   if (curSearch) {
-    var q = curSearch.toLowerCase();
-    list = list.filter(function(g) { return g.title.toLowerCase().indexOf(q) !== -1; });
+    // Match each word of the query independently rather than the whole string as
+    // one run, so "disney valley" still finds "Disney Dreamlight Valley" and word
+    // order doesn't matter. Every word must appear somewhere in the title, which
+    // keeps results tight while typing.
+    var terms = searchNorm(curSearch).split(' ').filter(Boolean);
+    if (terms.length) {
+      list = list.filter(function(g) {
+        var t = g._searchKey || (g._searchKey = searchNorm(g.title));
+        return terms.every(function(w) { return t.indexOf(w) !== -1; });
+      });
+    }
   }
 
   return list.slice().sort(function(a, b) {
