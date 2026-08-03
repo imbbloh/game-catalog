@@ -55,11 +55,21 @@ header {
 
 .logo-icon {
   width: 38px; height: 38px; border-radius: 10px;
-  flex-shrink: 0; display: block;
-  object-fit: contain;
-  background: #fff; padding: 2px;
+  flex-shrink: 0; display: block; overflow: hidden;
+  background: #fff;
   box-shadow: 0 1px 4px rgba(0,0,0,.25);
 }
+
+/* The mascot PNG carries a wide white margin, so it's scaled up and clipped by
+   the tile to make the dumpling fill the frame. Tune --logo-zoom if the crop
+   sits too tight or too loose. */
+.logo-icon img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  transform: scale(var(--logo-zoom, 1.3));
+}
+/* the SVG fallback is already cropped to its content — don't zoom it again */
+.logo-icon img.is-svg { transform: none; padding: 2px; }
 
 .logo-text h1 {
   font-family: 'Syne', sans-serif; font-weight: 800;
@@ -314,7 +324,10 @@ header {
 
   <header>
     <a class="logo" href="https://imbbloh.github.io/game-catalog/">
-      <img class="logo-icon" src="assets/logo.svg" alt="imbbloh" width="38" height="38">
+      <span class="logo-icon">
+        <img src="assets/logo.png" alt="imbbloh" width="38" height="38"
+             onerror="this.onerror=null;this.src='assets/logo.svg';this.classList.add('is-svg')">
+      </span>
       <div class="logo-text">
         <h1>imbbloh</h1>
         <p>game catalog</p>
