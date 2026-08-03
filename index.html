@@ -60,13 +60,14 @@ header {
   box-shadow: 0 1px 4px rgba(0,0,0,.25);
 }
 
-/* The mascot PNG carries a wide white margin, so it's scaled up and clipped by
-   the tile to make the dumpling fill the frame. Tune --logo-zoom if the crop
-   sits too tight or too loose. */
+/* The mascot PNG carries a wide transparent margin and sits a touch high and
+   right of centre, so it's recentred and scaled up until the artwork fills the
+   tile, with the empty margin clipped away. Tune --logo-zoom to crop tighter
+   or looser. */
 .logo-icon img {
   width: 100%; height: 100%;
   object-fit: contain;
-  transform: scale(var(--logo-zoom, 1.3));
+  transform: translate(-3%, 4.5%) scale(var(--logo-zoom, 1.28));
 }
 /* the SVG fallback is already cropped to its content — don't zoom it again */
 .logo-icon img.is-svg { transform: none; padding: 2px; }
