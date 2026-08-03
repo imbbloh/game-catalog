@@ -154,6 +154,17 @@ header {
 .f-pill.fps.on { background: rgba(0,112,209,.15);         color: #44aaff;  border-color: var(--blue); }
 .f-pill.fco.on { background: rgba(62,207,126,.15);        color: var(--green); border-color: var(--green); }
 
+/* Hovering previews the active look: the label and border pick up the pill's
+   own colour alongside the logo, instead of the logo lighting up on its own.
+   Gated on a real pointer so the state doesn't stick after a tap, and skipped
+   on the active pill, which is already styled. */
+@media (hover: hover) {
+  .f-pill.fa:not(.on):hover  { color: var(--accent);  border-color: rgba(240,193,64,.45); }
+  .f-pill.fns:not(.on):hover { color: #ff5555;        border-color: rgba(224,0,0,.55); }
+  .f-pill.fps:not(.on):hover { color: #44aaff;        border-color: rgba(0,112,209,.55); }
+  .f-pill.fco:not(.on):hover { color: var(--green);   border-color: rgba(62,207,126,.55); }
+}
+
 .sort-select {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 9px; color: var(--muted);
