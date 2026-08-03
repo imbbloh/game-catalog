@@ -1,7 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="#0070D1" role="img" aria-label="PlayStation">
-  <!-- P: outer silhouette with the counter knocked out -->
-  <path fill-rule="evenodd" d="M146 34h122c80 0 129 49 129 119s-49 119-129 119h-55v146l-67 22V34zm67 66v106h51c39 0 64-20 64-53s-25-53-64-53h-51z"/>
-  <!-- S: wide, flattened perspective ribbon sitting under the P -->
-  <path fill="none" stroke="#0070D1" stroke-width="42" stroke-linecap="round"
-        d="M446 366c0-26-104-32-152-18-44 13-38 32 26 41 68 10 78 30 36 43-46 14-152 8-152-18"/>
+  <defs>
+    <!-- One narrow vertical slit does double duty: inside the bowl it forms the
+         P's counter, and below the bowl it keeps the stem clear of the S. -->
+    <mask id="ps-slit">
+      <rect width="512" height="512" fill="#fff"/>
+      <rect x="283" y="112" width="20" height="356" rx="10" fill="#000"/>
+    </mask>
+  </defs>
+  <g mask="url(#ps-slit)">
+    <!-- P: stem plus bowl as one solid form -->
+    <path d="M190 57h140c72 0 98 45 98 117 0 72-46 118-120 118h-23v170h-95z"/>
+    <!-- S: one flattened ribbon — hooks left at the top, right at the bottom -->
+    <path fill="none" stroke="#0070D1" stroke-width="46" stroke-linecap="round"
+          d="M155 400c-75-4-125-15-127-42-2-26 62-42 147-48 85-6 205 0 265 15 50 12 60 35 30 60-30 25-120 47-185 57"/>
+  </g>
 </svg>
