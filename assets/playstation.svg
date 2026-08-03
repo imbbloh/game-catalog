@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="#0070D1" role="img" aria-label="PlayStation">
+  <!-- P: outer silhouette with the counter knocked out -->
+  <path fill-rule="evenodd" d="M146 34h122c80 0 129 49 129 119s-49 119-129 119h-55v146l-67 22V34zm67 66v106h51c39 0 64-20 64-53s-25-53-64-53h-51z"/>
+  <!-- S: wide, flattened perspective ribbon sitting under the P -->
+  <path fill="none" stroke="#0070D1" stroke-width="42" stroke-linecap="round"
+        d="M446 366c0-26-104-32-152-18-44 13-38 32 26 41 68 10 78 30 36 43-46 14-152 8-152-18"/>
+</svg>

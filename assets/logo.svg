@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="72 58 424 424" role="img" aria-label="imbbloh dumpling mascot">
+  <defs>
+    <linearGradient id="wrap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FBEBCF"/>
+      <stop offset="1" stop-color="#F3D9AE"/>
+    </linearGradient>
+  </defs>
+
+  <!-- chopsticks -->
+  <g stroke-linecap="round" fill="none" stroke="#E8207F">
+    <path d="M232 150 L470 96"  stroke-width="30"/>
+    <path d="M232 206 L482 172" stroke-width="30"/>
+  </g>
+
+  <!-- green chive curl -->
+  <path d="M150 148 q-22 -26 -44 -6 t-6 46 q10 26 40 30 t46 -26"
+        fill="none" stroke="#3FC021" stroke-width="26" stroke-linecap="round"/>
+
+  <!-- dumpling wrapper -->
+  <path d="M256 214 c-92 0 -160 66 -168 148 a12 12 0 0 0 12 14 h312 a12 12 0 0 0 12 -14 c-8 -82 -76 -148 -168 -148 z"
+        fill="url(#wrap)" stroke="#F2A81C" stroke-width="12" stroke-linejoin="round"/>
+
+  <!-- wrapper pleat lines -->
+  <g fill="none" stroke="#F2A81C" stroke-width="11" stroke-linecap="round" opacity=".95">
+    <path d="M196 232 q-42 54 -50 132"/>
+    <path d="M316 232 q42 54 50 132"/>
+  </g>
+
+  <!-- green leaf garnish -->
+  <path d="M300 206 q66 -34 108 12 q-18 60 -84 62 q-34 -30 -24 -74 z"
+        fill="#5FD22B" stroke="#3FA018" stroke-width="11" stroke-linejoin="round"/>
+
+  <!-- gold noodle swirl -->
+  <path d="M292 178 q-26 -34 4 -50 t42 26 q6 42 -30 72"
+        fill="none" stroke="#F5A623" stroke-width="20" stroke-linecap="round"/>
+  <path d="M252 268 q-30 -6 -28 -32 t34 -12"
+        fill="none" stroke="#F5A623" stroke-width="18" stroke-linecap="round"/>
+
+  <!-- red chilli fleck -->
+  <path d="M214 254 l30 -6 l-14 28 z" fill="#EE2020"/>
+
+  <!-- face -->
+  <ellipse cx="256" cy="330" rx="86" ry="72" fill="#FFFDF8"/>
+  <circle cx="228" cy="316" r="13" fill="#4A2A18"/>
+  <circle cx="286" cy="316" r="13" fill="#4A2A18"/>
+  <path d="M244 344 h26 l-13 18 z" fill="#4A2A18"/>
+  <g fill="none" stroke="#EE1E86" stroke-width="12" stroke-linecap="round">
+    <path d="M196 348 q-14 8 -6 22"/>
+    <path d="M316 348 q14 8 6 22"/>
+  </g>
+
+  <!-- plate -->
+  <path d="M104 384 h304 a10 10 0 0 1 10 12 l-14 44 a26 26 0 0 1 -24 18 H132 a26 26 0 0 1 -24 -18 l-14 -44 a10 10 0 0 1 10 -12 z"
+        fill="#FBB40B" stroke="#E09405" stroke-width="10" stroke-linejoin="round"/>
+  <g fill="none" stroke="#FFF6DC" stroke-width="9" stroke-linecap="square">
+    <path d="M136 400 v18 h16 v-12 h10"/>
+    <path d="M188 400 v18 h16 v-12 h10"/>
+    <path d="M240 400 v18 h16 v-12 h10"/>
+    <path d="M292 400 v18 h16 v-12 h10"/>
+    <path d="M344 400 v18 h16 v-12 h10"/>
+  </g>
+</svg>
