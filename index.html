@@ -211,6 +211,15 @@ header {
   transition: border-color .18s, transform .18s, box-shadow .18s;
 }
 
+/* Platform tint: a wash and border in the platform's colour, so a shelf of
+   cards reads red or blue at a glance. Declared before :hover so the gold
+   hover border still wins — equal specificity, later rule takes it. Code and
+   unknown cards intentionally keep the neutral surface. */
+.game-card.tint-ns { background: linear-gradient(#241519, #181318); border-color: #4d242e; }
+.game-card.tint-ps { background: linear-gradient(#141d2c, #131620); border-color: #23406a; }
+.game-card.tint-ns .card-footer { border-top-color: #4d242e; }
+.game-card.tint-ps .card-footer { border-top-color: #23406a; }
+
 .game-card:hover {
   border-color: var(--accent);
   transform: translateY(-2px);
@@ -949,7 +958,7 @@ function makeCard(game) {
 
   // ── card element ──
   var card = document.createElement('div');
-  card.className = 'game-card';
+  card.className = 'game-card tint-' + pc;
 
   // ── cover ──
   var coverWrap = document.createElement('div');
