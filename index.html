@@ -961,7 +961,13 @@ function loadAll() {
         errs.push((SHEETS[i].tab || 'default') + ': ' + r.reason.message);
       }
     });
-    if (errs.length) console.warn('Sheet errors:', errs.join(' | '));
+    // Each tab is an entire category, so a failed tab doesn't degrade the
+    // catalog — it erases a whole platform. Resolving with what's left would
+    // publish that gap and, worse, overwrite the complete games.json snapshot
+    // with it. Fail instead, and let the snapshot stand.
+    if (errs.length) {
+      throw new Error('Sheet tab(s) unavailable — ' + errs.join(' | '));
+    }
     // Raw Data covers take priority; per-tab column I stays as fallback
     all.forEach(function(g) {
       var c = rawCovers[normTitle(g.title)] || rawCovers[normTitle(g.eshopTitle)];
