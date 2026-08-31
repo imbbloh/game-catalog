@@ -63,7 +63,7 @@ Raw Data,62,Disco Elysium - The Final Cut,no match,,
 Raw Data,63,Disney Dreamlight Valley,matched (exact),https://www.carousell.sg/p/1443749157/,Disney Dreamlight Valley
 Raw Data,64,Divinity: Original Sin 2 - Definitive Edition,no match,,
 Raw Data,65,Donkey Kong Bananza,matched (exact),https://www.carousell.sg/p/1417518603/,Donkey Kong Bananza
-Raw Data,66,Donkey Kong Country Tropical Freeze,no match,,
+Raw Data,66,Donkey Kong Country Tropical Freeze,matched (exact),https://www.carousell.sg/p/1457388255/,Donkey Kong Country: Tropical Freeze
 Raw Data,67,Doraemon Dorayaki Shop Story,no match,,
 Raw Data,68,Doraemon Story of Seasons: Friends of the Great Kingdom,no match,,
 Raw Data,69,Dr Kawashima’s Brain Training for Nintendo Switch,matched (exact),https://www.carousell.sg/p/1439504452/,Dr Kawashima's Brain Training for Nintendo Switch
@@ -271,7 +271,7 @@ Raw Data,270,Super Mario Galaxy + Super Mario Galaxy 2,no match,,
 Raw Data,271,Super Mario Maker 2,no match,,
 Raw Data,272,Super Mario Odyssey,matched (exact),https://www.carousell.sg/p/1385287642/,Super Mario Odyssey
 Raw Data,273,Super Mario Party,no match,,
-Raw Data,274,Super Mario Party Jamboree,matched (exact),https://www.carousell.sg/p/1382884407/,Super Mario Party Jamboree
+Raw Data,274,Super Mario Party Jamboree,matched (exact),https://www.carousell.sg/p/1457362383/,Super Mario Party Jamboree
 Raw Data,275,Super Mario RPG,no match,,
 Raw Data,276,SUPER ROBOT WARS Y,no match,,
 Raw Data,277,Super Smash Bros. Ultimate,matched (exact),https://www.carousell.sg/p/1388204941/,Super Smash Bros. Ultimate
@@ -369,29 +369,31 @@ Raw Data,368,Xenoblade Chronicles 2,matched (exact),https://www.carousell.sg/p/1
 Raw Data,369,Xenoblade Chronicles 2 – Nintendo Switch 2 Edition,matched (exact),https://www.carousell.sg/p/1457240278/,Xenoblade Chronicles 2
 Raw Data,370,Persona 5 Royal,matched (exact),https://www.carousell.sg/p/1457247299/,Persona 5 Royal
 Raw Data,371,NieR: Automata The End of YoRHa Edition,matched (exact),https://www.carousell.sg/p/1457317854/,NieR: Automata The End of YoRHa Edition
-Raw Data,372,The Legend of Zelda: Skyward Sword HD,no match,,
-Raw Data,373,MARIO + RABBIDS SPARKS OF HOPE,no match,,
-Raw Data,374,Mario + Rabbids Kingdom Battle,no match,,
-Raw Data,375,DOOM Eternal,no match,,
-Raw Data,376,Super Mario Party Jamboree – Nintendo Switch 2 Edition + Jamboree TV,matched (exact),https://www.carousell.sg/p/1382884407/,Super Mario Party Jamboree
-Raw Data,377,Hyrule Warriors: Age of Calamity,no match,,
-Raw Data,378,Donkey Kong Country Returns HD,no match,,
-Raw Data,379,Donkey Kong Country: Tropical Freeze,no match,,
-Raw Data,380,SONIC X SHADOW GENERATIONS,no match,,
-Raw Data,381,Crash Bandicoot 4: It's About Time,no match,,
-Raw Data,382,TRIANGLE STRATEGY,no match,,
-Raw Data,383,BRAVELY DEFAULT II,no match,,
-Raw Data,384,NBA 2K27,no match,,
-Raw Data,385,Fire Emblem: Fortune's Weave,no match,,
-Raw Data,386,The Lord of the Rings: War in the North - Legacy Edition,no match,,
-Raw Data,387,Mario Strikers: Battle League,no match,,
-Raw Data,388,Metroid Prime Remastered,no match,,
-Raw Data,389,LEGO Marvel Super Heroes 2,no match,,
-Raw Data,390,LEGO DC Super-Villains,no match,,
-Raw Data,391,Lego City Undercover,no match,,
-Raw Data,392,LEGO Star Wars: The Skywalker Saga,no match,,
-Raw Data,393,LEGO Jurassic World,no match,,
-Raw Data,394,NBA 2K27,no match,,
+Raw Data,372,The Legend of Zelda: Skyward Sword HD,matched (exact),https://www.carousell.sg/p/1457318345/,The Legend of Zelda: Skyward Sword HD
+Raw Data,373,MARIO + RABBIDS SPARKS OF HOPE,matched (exact),https://www.carousell.sg/p/1457318982/,MARIO + RABBIDS SPARKS OF HOPE
+Raw Data,374,Mario + Rabbids Kingdom Battle,matched (exact),https://www.carousell.sg/p/1457319330/,Mario + Rabbids Kingdom Battle
+Raw Data,375,DOOM Eternal,matched (exact),https://www.carousell.sg/p/1457351045/,DOOM Eternal
+Raw Data,376,Super Mario Party Jamboree – Nintendo Switch 2 Edition + Jamboree TV,matched (exact),https://www.carousell.sg/p/1457362383/,Super Mario Party Jamboree
+Raw Data,377,Hyrule Warriors: Age of Calamity,matched (exact),https://www.carousell.sg/p/1457364117/,Hyrule Warriors: Age of Calamity
+Raw Data,378,Donkey Kong Country Returns HD,matched (exact),https://www.carousell.sg/p/1457381483/,Donkey Kong Country Returns HD
+Raw Data,379,Donkey Kong Country: Tropical Freeze,matched (exact),https://www.carousell.sg/p/1457388255/,Donkey Kong Country: Tropical Freeze
+Raw Data,380,SONIC X SHADOW GENERATIONS,matched (exact),https://www.carousell.sg/p/1457389527/,SONIC X SHADOW GENERATIONS
+Raw Data,381,Crash Bandicoot 4: It's About Time,matched (exact),https://www.carousell.sg/p/1457394535/,Crash Bandicoot 4: It's About Time
+Raw Data,382,TRIANGLE STRATEGY,matched (exact),https://www.carousell.sg/p/1457396374/,TRIANGLE STRATEGY
+Raw Data,383,BRAVELY DEFAULT II,matched (exact),https://www.carousell.sg/p/1457397379/,BRAVELY DEFAULT II / BRAVELY DEFAULT 2
+Raw Data,384,NBA 2K27,matched — VERIFY,https://www.carousell.sg/p/1457620072/,EARLY ACCESS TODAY NBA 2K27
+Raw Data,385,Fire Emblem: Fortune's Weave,matched (exact),https://www.carousell.sg/p/1457729422/,Fire Emblem: Fortune's Weave
+Raw Data,386,The Lord of the Rings: War in the North - Legacy Edition,matched (exact),https://www.carousell.sg/p/1457919227/,The Lord of the Rings: War in the North - Legacy Edition
+Raw Data,387,Mario Strikers: Battle League,matched (exact),https://www.carousell.sg/p/1457951896/,Mario Strikers: Battle League
+Raw Data,388,Metroid Prime Remastered,matched (exact),https://www.carousell.sg/p/1457974939/,Metroid Prime Remastered
+Raw Data,389,LEGO Marvel Super Heroes 2,matched (exact),https://www.carousell.sg/p/1458187412/,LEGO Marvel Super Heroes 2
+Raw Data,390,LEGO DC Super-Villains,matched (exact),https://www.carousell.sg/p/1458194752/,LEGO DC Super-Villains
+Raw Data,391,Lego City Undercover,matched (exact),https://www.carousell.sg/p/1458393258/,Lego City Undercover
+Raw Data,392,LEGO Star Wars: The Skywalker Saga,matched (exact),https://www.carousell.sg/p/1458394396/,LEGO Star Wars: The Skywalker Saga
+Raw Data,393,LEGO Jurassic World,matched (exact),https://www.carousell.sg/p/1458395060/,LEGO Jurassic World
+Raw Data,394,NBA 2K27,matched (exact),https://www.carousell.sg/p/1458622242/,NBA 2K27
+Raw Data,395,Orbitals,matched (exact),https://www.carousell.sg/p/1458746072/,Orbitals
+Raw Data,396,Moonlighter 2: The Endless Vault,matched (exact),https://www.carousell.sg/p/1458764336/,Moonlighter 2: The Endless Vault
 Raw Data - Digital Codes,2,Digimon Story Time Stranger - Additional Digimon & Episode Pack 1: Alternate Dimension (DLC),matched (exact),https://www.carousell.sg/p/1448959728/,Digimon Story Time Stranger - Additional Digimon & Episode Pack 1: Alternate Dimension Nintendo
 Raw Data - Digital Codes,3,Digimon Story Time Stranger - Additional Digimon & Episode Pack 2: GAKU−RAN (DLC),matched (exact),https://www.carousell.sg/p/1448958977/,Digimon Story Time Stranger - Additional Digimon & Episode Pack 2: GAKU−RAN Nintendo
 Raw Data - Digital Codes,4,Digimon Story Time Stranger - Additional Digimon & Episode Pack 3: Anti-ParadoX (DLC),matched (exact),https://www.carousell.sg/p/1448958029/,Digimon Story Time Stranger - Additional Digimon & Episode Pack 3: Anti-ParadoX Nintendo
@@ -595,7 +597,7 @@ Raw Data - Digital Codes,201,Pokemon Legends: Z-A,matched — VERIFY,https://www
 Raw Data - Digital Codes,202,Pokemon Legends: Z-A – Nintendo Switch 2 Edition,matched — VERIFY,https://www.carousell.sg/p/1396382401/,Pokémon™ Legends: Z-A Pokemon Legends ZA Nintendo
 Raw Data - Digital Codes,203,Pokemon Legends: Z-A – Nintendo Switch 2 Edition (Upgrade Pack),matched (exact),https://www.carousell.sg/p/1428293481/,Pokémon Legends: Z-A
 Raw Data - Digital Codes,204,Pokemon Legends: Z-A – Mega Dimension DLC (DLC),matched (exact),https://www.carousell.sg/p/1427655075/,Pokemon Legends: Z-A
-Raw Data - Digital Codes,205,ELDEN RING Tarnished Edition,matched — VERIFY,https://www.carousell.sg/p/1452620281/,PREORDER EXCLUSIVE ELDEN RING Tarnished Edition Nintendo
+Raw Data - Digital Codes,205,ELDEN RING Tarnished Edition,matched (exact),https://www.carousell.sg/p/1452620281/,ELDEN RING Tarnished Edition Nintendo
 Raw Data - Digital Codes,206,Xenoblade Chronicles 2 – Nintendo Switch 2 Edition (Upgrade Pack),matched (exact),https://www.carousell.sg/p/1452801671/,Xenoblade Chronicles 2
 Raw Data - Digital Codes,207,Xenoblade Chronicles 2,matched (exact),https://www.carousell.sg/p/1452806214/,Xenoblade Chronicles 2 Nintendo
 Raw Data - Digital Codes,208,Xenoblade Chronicles 2 – Nintendo Switch 2 Edition,matched (exact),https://www.carousell.sg/p/1452806214/,Xenoblade Chronicles 2 Nintendo
@@ -676,31 +678,31 @@ Raw Data - Digital Codes,282,Red Dead Redemption,no match,,
 Raw Data - Digital Codes,283,ASTRAL CHAIN,matched (exact),https://www.carousell.sg/p/1457242256/,ASTRAL CHAIN Nintendo
 Raw Data - Digital Codes,284,Persona 5 Royal,matched (exact),https://www.carousell.sg/p/1457245870/,Persona 5 Royal Nintendo
 Raw Data - Digital Codes,285,NieR:Automata The End of YoRHa Edition,matched (exact),https://www.carousell.sg/p/1457317954/,NieR:Automata The End of YoRHa Edition Nintendo
-Raw Data - Digital Codes,286,MARIO + RABBIDS SPARKS OF HOPE,no match,,
-Raw Data - Digital Codes,287,Mario + Rabbids Sparks of Hope Gold Edition,no match,,
-Raw Data - Digital Codes,288,Mario + Rabbids Kingdom Battle,no match,,
+Raw Data - Digital Codes,286,MARIO + RABBIDS SPARKS OF HOPE,matched (exact),https://www.carousell.sg/p/1457318803/,MARIO + RABBIDS SPARKS OF HOPE Nintendo
+Raw Data - Digital Codes,287,Mario + Rabbids Sparks of Hope Gold Edition,matched — VERIFY,https://www.carousell.sg/p/1457318803/,MARIO + RABBIDS SPARKS OF HOPE Nintendo
+Raw Data - Digital Codes,288,Mario + Rabbids Kingdom Battle,matched (exact),https://www.carousell.sg/p/1457319161/,Mario + Rabbids Kingdom Battle Nintendo
 Raw Data - Digital Codes,289,Mario + Rabbids Kingdom Battle Gold Edition,no match,,
-Raw Data - Digital Codes,290,DOOM Eternal,no match,,
+Raw Data - Digital Codes,290,DOOM Eternal,matched (exact),https://www.carousell.sg/p/1457348862/,DOOM Eternal Nintendo
 Raw Data - Digital Codes,291,Hyrule Warriors: Age of Calamity Expansion Pass (DLC),matched (exact),https://www.carousell.sg/p/1437357381/,Hyrule Warriors: Age of Calamity Expansion Pass Nintendo
-Raw Data - Digital Codes,292,Donkey Kong Country Returns HD,no match,,
-Raw Data - Digital Codes,293,Donkey Kong Country: Tropical Freeze,no match,,
-Raw Data - Digital Codes,294,SONIC X SHADOW GENERATIONS,no match,,
-Raw Data - Digital Codes,295,Crash Bandicoot 4: It’s About Time,no match,,
-Raw Data - Digital Codes,296,TRIANGLE STRATEGY,no match,,
-Raw Data - Digital Codes,297,BRAVELY DEFAULT II,no match,,
-Raw Data - Digital Codes,298,Orbitals,no match,,
-Raw Data - Digital Codes,299,Mario Strikers: Battle League,no match,,
-Raw Data - Digital Codes,300,Metroid Prime Remastered,no match,,
-Raw Data - Digital Codes,301,Call of Duty: Modern Warfare 4 - Standard Edition,no match,,
-Raw Data - Digital Codes,302,NBA 2K27,no match,,
+Raw Data - Digital Codes,292,Donkey Kong Country Returns HD,matched (exact),https://www.carousell.sg/p/1457381334/,Donkey Kong Country Returns HD Nintendo
+Raw Data - Digital Codes,293,Donkey Kong Country: Tropical Freeze,matched (exact),https://www.carousell.sg/p/1457388158/,Donkey Kong Country: Tropical Freeze Nintendo
+Raw Data - Digital Codes,294,SONIC X SHADOW GENERATIONS,matched (exact),https://www.carousell.sg/p/1457389400/,SONIC X SHADOW GENERATIONS Nintendo
+Raw Data - Digital Codes,295,Crash Bandicoot 4: It’s About Time,matched (exact),https://www.carousell.sg/p/1457395348/,Crash Bandicoot 4: It’s About Time Nintendo
+Raw Data - Digital Codes,296,TRIANGLE STRATEGY,matched (exact),https://www.carousell.sg/p/1457396520/,TRIANGLE STRATEGY Nintendo
+Raw Data - Digital Codes,297,BRAVELY DEFAULT II,matched (exact),https://www.carousell.sg/p/1457398054/,BRAVELY DEFAULT II / BRAVELY DEFAULT 2 Nintendo
+Raw Data - Digital Codes,298,Orbitals,matched (exact),https://www.carousell.sg/p/1457727778/,Orbitals Nintendo
+Raw Data - Digital Codes,299,Mario Strikers: Battle League,matched (exact),https://www.carousell.sg/p/1457952115/,Mario Strikers: Battle League Nintendo
+Raw Data - Digital Codes,300,Metroid Prime Remastered,matched (exact),https://www.carousell.sg/p/1458012227/,Metroid Prime Remastered Nintendo
+Raw Data - Digital Codes,301,Call of Duty: Modern Warfare 4 - Standard Edition,matched — VERIFY,https://www.carousell.sg/p/1458153573/,PREORDER EXCLUSIVE Call of Duty: Modern Warfare 4 - Standard Edition Nintendo
+Raw Data - Digital Codes,302,NBA 2K27,matched (exact),https://www.carousell.sg/p/1458155602/,NBA 2K27 Nintendo
 Raw Data - Digital Codes,303,Call of Duty: Modern Warfare 4 - Vault Edition,no match,,
-Raw Data - Digital Codes,304,METAL GEAR SOLID 4: Guns of the Patriots - Master Collection Version,no match,,
-Raw Data - Digital Codes,305,The Witcher 3: Wild Hunt — Remastered,no match,,
-Raw Data - Digital Codes,306,Lego City Undercover,no match,,
-Raw Data - Digital Codes,307,LEGO Star Wars: The Skywalker Saga,no match,,
-Raw Data - Digital Codes,308,LEGO Jurassic World,no match,,
-Raw Data - Digital Codes,309,LEGO Batman: Legacy of the Dark Knight,no match,,
-Raw Data - Digital Codes,310,Moonlighter 2: The Endless Vault,no match,,
+Raw Data - Digital Codes,304,METAL GEAR SOLID 4: Guns of the Patriots - Master Collection Version,matched (exact),https://www.carousell.sg/p/1458198853/,METAL GEAR SOLID 4: Guns of the Patriots - Master Collection Version Nintendo
+Raw Data - Digital Codes,305,The Witcher 3: Wild Hunt — Remastered,matched — VERIFY,https://www.carousell.sg/p/1458226124/,PREORDER EXCLUSIVE The Witcher 3: Wild Hunt — Remastered Nintendo
+Raw Data - Digital Codes,306,Lego City Undercover,matched (exact),https://www.carousell.sg/p/1458392883/,Lego City Undercover Nintendo
+Raw Data - Digital Codes,307,LEGO Star Wars: The Skywalker Saga,matched (exact),https://www.carousell.sg/p/1458393929/,LEGO Star Wars: The Skywalker Saga Nintendo
+Raw Data - Digital Codes,308,LEGO Jurassic World,matched (exact),https://www.carousell.sg/p/1458394804/,LEGO Jurassic World Nintendo
+Raw Data - Digital Codes,309,LEGO Batman: Legacy of the Dark Knight,matched (exact),https://www.carousell.sg/p/1458396405/,LEGO Batman: Legacy of the Dark Knight Nintendo
+Raw Data - Digital Codes,310,Moonlighter 2: The Endless Vault,matched (exact),https://www.carousell.sg/p/1458399589/,Moonlighter 2: The Endless Vault Nintendo
 Raw Data - Digital Codes,311,Big Brain Academy: Brain vs. Brain,matched (exact),https://www.carousell.sg/p/1429413119/,Big Brain Academy: Brain vs. Brain Nintendo
 Raw Data - Digital Codes,312,Clubhouse Games: 51 Worldwide Classics,matched (exact),https://www.carousell.sg/p/1429414347/,Clubhouse Games: 51 Worldwide Classics Nintendo
 Raw Data - Digital Codes,313,Dr Kawashima's Brain Training for Nintendo Switch,matched (exact),https://www.carousell.sg/p/1429386453/,Dr Kawashima's Brain Training for Nintendo Switch Nintendo

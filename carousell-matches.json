@@ -1,5 +1,5 @@
 {
- "ts": 1788125217377,
+ "ts": 1788165856118,
  "games": {
   "2": {
    "url": "https://www.carousell.sg/p/1440278940/",
@@ -164,6 +164,10 @@
   "65": {
    "url": "https://www.carousell.sg/p/1417518603/",
    "price": 15
+  },
+  "66": {
+   "url": "https://www.carousell.sg/p/1457388255/",
+   "price": 9
   },
   "69": {
    "url": "https://www.carousell.sg/p/1439504452/",
@@ -642,8 +646,8 @@
    "price": 9
   },
   "274": {
-   "url": "https://www.carousell.sg/p/1382884407/",
-   "price": 9
+   "url": "https://www.carousell.sg/p/1457362383/",
+   "price": 5
   },
   "277": {
    "url": "https://www.carousell.sg/p/1388204941/",
@@ -839,7 +843,7 @@
   },
   "355": {
    "url": "https://www.carousell.sg/p/1457194066/",
-   "price": 9
+   "price": 15
   },
   "356": {
    "url": "https://www.carousell.sg/p/1457199741/",
@@ -901,8 +905,104 @@
    "url": "https://www.carousell.sg/p/1457317854/",
    "price": 9
   },
+  "372": {
+   "url": "https://www.carousell.sg/p/1457318345/",
+   "price": 9
+  },
+  "373": {
+   "url": "https://www.carousell.sg/p/1457318982/",
+   "price": 5
+  },
+  "374": {
+   "url": "https://www.carousell.sg/p/1457319330/",
+   "price": 5
+  },
+  "375": {
+   "url": "https://www.carousell.sg/p/1457351045/",
+   "price": 9
+  },
   "376": {
-   "url": "https://www.carousell.sg/p/1382884407/",
+   "url": "https://www.carousell.sg/p/1457362383/",
+   "price": 5
+  },
+  "377": {
+   "url": "https://www.carousell.sg/p/1457364117/",
+   "price": 9
+  },
+  "378": {
+   "url": "https://www.carousell.sg/p/1457381483/",
+   "price": 9
+  },
+  "379": {
+   "url": "https://www.carousell.sg/p/1457388255/",
+   "price": 9
+  },
+  "380": {
+   "url": "https://www.carousell.sg/p/1457389527/",
+   "price": 9
+  },
+  "381": {
+   "url": "https://www.carousell.sg/p/1457394535/",
+   "price": 5
+  },
+  "382": {
+   "url": "https://www.carousell.sg/p/1457396374/",
+   "price": 9
+  },
+  "383": {
+   "url": "https://www.carousell.sg/p/1457397379/",
+   "price": 9
+  },
+  "384": {
+   "url": "https://www.carousell.sg/p/1457620072/",
+   "price": 19
+  },
+  "385": {
+   "url": "https://www.carousell.sg/p/1457729422/",
+   "price": 9
+  },
+  "386": {
+   "url": "https://www.carousell.sg/p/1457919227/",
+   "price": 9
+  },
+  "387": {
+   "url": "https://www.carousell.sg/p/1457951896/",
+   "price": 9
+  },
+  "388": {
+   "url": "https://www.carousell.sg/p/1457974939/",
+   "price": 9
+  },
+  "389": {
+   "url": "https://www.carousell.sg/p/1458187412/",
+   "price": 5
+  },
+  "390": {
+   "url": "https://www.carousell.sg/p/1458194752/",
+   "price": 5
+  },
+  "391": {
+   "url": "https://www.carousell.sg/p/1458393258/",
+   "price": 5
+  },
+  "392": {
+   "url": "https://www.carousell.sg/p/1458394396/",
+   "price": 9
+  },
+  "393": {
+   "url": "https://www.carousell.sg/p/1458395060/",
+   "price": 5
+  },
+  "394": {
+   "url": "https://www.carousell.sg/p/1458622242/",
+   "price": 9
+  },
+  "395": {
+   "url": "https://www.carousell.sg/p/1458746072/",
+   "price": 9
+  },
+  "396": {
+   "url": "https://www.carousell.sg/p/1458764336/",
    "price": 9
   }
  },
@@ -1721,7 +1821,7 @@
   },
   "205": {
    "url": "https://www.carousell.sg/p/1452620281/",
-   "price": 98
+   "price": 100
   },
   "206": {
    "url": "https://www.carousell.sg/p/1452801671/",
@@ -1997,7 +2097,7 @@
   },
   "276": {
    "url": "https://www.carousell.sg/p/1457222972/",
-   "price": 40
+   "price": 60
   },
   "277": {
    "url": "https://www.carousell.sg/p/1457224355/",
@@ -2027,9 +2127,97 @@
    "url": "https://www.carousell.sg/p/1457317954/",
    "price": 40
   },
+  "286": {
+   "url": "https://www.carousell.sg/p/1457318803/",
+   "price": 20
+  },
+  "287": {
+   "url": "https://www.carousell.sg/p/1457318803/",
+   "price": 20
+  },
+  "288": {
+   "url": "https://www.carousell.sg/p/1457319161/",
+   "price": 30
+  },
+  "290": {
+   "url": "https://www.carousell.sg/p/1457348862/",
+   "price": 40
+  },
   "291": {
    "url": "https://www.carousell.sg/p/1437357381/",
    "price": 24
+  },
+  "292": {
+   "url": "https://www.carousell.sg/p/1457381334/",
+   "price": 56
+  },
+  "293": {
+   "url": "https://www.carousell.sg/p/1457388158/",
+   "price": 56
+  },
+  "294": {
+   "url": "https://www.carousell.sg/p/1457389400/",
+   "price": 40
+  },
+  "295": {
+   "url": "https://www.carousell.sg/p/1457395348/",
+   "price": 50
+  },
+  "296": {
+   "url": "https://www.carousell.sg/p/1457396520/",
+   "price": 45
+  },
+  "297": {
+   "url": "https://www.carousell.sg/p/1457398054/",
+   "price": 70
+  },
+  "298": {
+   "url": "https://www.carousell.sg/p/1457727778/",
+   "price": 45
+  },
+  "299": {
+   "url": "https://www.carousell.sg/p/1457952115/",
+   "price": 56
+  },
+  "300": {
+   "url": "https://www.carousell.sg/p/1458012227/",
+   "price": 35
+  },
+  "301": {
+   "url": "https://www.carousell.sg/p/1458153573/",
+   "price": 88
+  },
+  "302": {
+   "url": "https://www.carousell.sg/p/1458155602/",
+   "price": 85
+  },
+  "304": {
+   "url": "https://www.carousell.sg/p/1458198853/",
+   "price": 35
+  },
+  "305": {
+   "url": "https://www.carousell.sg/p/1458226124/",
+   "price": 55
+  },
+  "306": {
+   "url": "https://www.carousell.sg/p/1458392883/",
+   "price": 16
+  },
+  "307": {
+   "url": "https://www.carousell.sg/p/1458393929/",
+   "price": 35
+  },
+  "308": {
+   "url": "https://www.carousell.sg/p/1458394804/",
+   "price": 25
+  },
+  "309": {
+   "url": "https://www.carousell.sg/p/1458396405/",
+   "price": 75
+  },
+  "310": {
+   "url": "https://www.carousell.sg/p/1458399589/",
+   "price": 27
   },
   "311": {
    "url": "https://www.carousell.sg/p/1429413119/",
