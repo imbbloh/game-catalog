@@ -1038,9 +1038,12 @@ function platClass(g) {
 // so the badge and the filter can never disagree about what counts as a DLC or
 // an upgrade pack.
 function codeLabel(g) {
+  // An upgrade pack IS the Switch 2 upgrade — every one in the catalog is
+  // Switch 2 — so naming the platform as well would just be noise.
   if (SUB_MATCH.upg(g)) return 'Code - Upgrade Pack';
-  if (SUB_MATCH.dlc(g)) return 'Code - DLC';
-  return 'Code';
+  var sw2 = SUB_MATCH.sw2(g);
+  if (SUB_MATCH.dlc(g)) return sw2 ? 'Code - Switch 2 DLC' : 'Code - DLC';
+  return sw2 ? 'Code - Switch 2' : 'Code';
 }
 
 // Footer link text per platform. Codes are eShop redemptions, so they point at
