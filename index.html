@@ -97,8 +97,33 @@ header {
 
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
+/* ── Sticky search + filters ── */
+/* Negative side margins let the background reach the app's gutters, so cards
+   scroll under the bar instead of showing through beside it. The z-index sits
+   above the grid but the pill dropdowns (z-index 30) live inside, so they still
+   layer correctly over it. */
+.sticky-bar {
+  position: sticky; top: 0; z-index: 40;
+  background: var(--bg);
+  margin: 0 -14px; padding: 8px 14px 2px;
+  transition: box-shadow .18s;
+}
+/* Raised only once pinned, so the shadow isn't drawn mid-page for no reason. */
+.sticky-bar.stuck { box-shadow: 0 10px 20px -12px rgba(0,0,0,.95); }
+
 /* ── Search ── */
 .search-wrap { position: relative; margin-bottom: 10px; }
+
+.search-clear {
+  position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; background: transparent; cursor: pointer;
+  color: var(--muted); font-size: 1.25rem; line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .12s, color .12s;
+}
+.search-clear:hover { background: var(--surface2); color: var(--text); }
 
 .search-icon {
   position: absolute; left: 14px; top: 50%;
@@ -110,7 +135,7 @@ header {
   width: 100%; background: var(--surface);
   border: 1px solid var(--border); border-radius: 12px;
   color: var(--text); font-family: 'DM Sans', sans-serif;
-  font-size: 0.95rem; padding: 12px 16px 12px 42px;
+  font-size: 0.95rem; padding: 12px 40px 12px 42px;  /* right: room for the clear button */
   outline: none; -webkit-appearance: none;
 }
 
@@ -365,6 +390,16 @@ header {
   .c-initial { font-size: 2.4rem; }
   .filter-pills { gap: 4px; }
   .f-pill { padding: 4px 10px; font-size: .62rem; }
+
+  /* Now that the bar is pinned its height is screen real estate, so keep it
+     short: let the pills wrap beside the sort control instead of pushing it
+     onto a row of its own, and tighten the search field. */
+  .controls { flex-wrap: nowrap; align-items: flex-start; gap: 6px; }
+  .filter-pills { flex: 1 1 auto; }
+  .sort-select { padding: 6px 8px; }
+  #searchInput { padding: 10px 38px 10px 38px; font-size: .9rem; }
+  .search-wrap { margin-bottom: 8px; }
+  .sticky-bar { padding-top: 6px; }
 }
 </style>
 </head>
@@ -385,9 +420,15 @@ header {
     <div class="live-badge"><div class="dot"></div>Live</div>
   </header>
 
+  <!-- Sentinel: once this scrolls out of view the bar below is pinned, which is
+       how the bar knows to raise its shadow. -->
+  <div id="stickySentinel" aria-hidden="true"></div>
+
+  <div class="sticky-bar" id="stickyBar">
   <div class="search-wrap">
     <span class="search-icon">⌕</span>
     <input type="text" id="searchInput" placeholder="Search games…" autocomplete="off" autocorrect="off" spellcheck="false">
+    <button type="button" class="search-clear" id="searchClear" aria-label="Clear search" hidden>×</button>
   </div>
 
   <div class="controls">
@@ -421,6 +462,7 @@ header {
       <option value="price-desc">Price ↓</option>
     </select>
   </div>
+  </div><!-- /.sticky-bar -->
 
   <div class="stats-bar" id="statsBar">
     <strong id="statTotal">0</strong> games
@@ -1295,10 +1337,38 @@ directLoad.then(function(games) {
 }).catch(function() {});
 
 // ── Events ──────────────────────────────────────────────────────────────────
-document.getElementById('searchInput').addEventListener('input', function(e) {
-  curSearch = e.target.value.trim();
+var searchEl = document.getElementById('searchInput');
+var clearEl  = document.getElementById('searchClear');
+
+function applySearch(v) {
+  curSearch = v.trim();
+  clearEl.hidden = curSearch === '';
   render();
+}
+
+searchEl.addEventListener('input', function(e) { applySearch(e.target.value); });
+
+// Escape clears without leaving the field — quicker than reaching for the button.
+searchEl.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && searchEl.value) { searchEl.value = ''; applySearch(''); }
 });
+
+clearEl.addEventListener('click', function() {
+  searchEl.value = '';
+  applySearch('');
+  searchEl.focus();
+});
+
+// Shadow the sticky bar only while it's actually pinned. The sentinel sits just
+// above it, so its leaving the viewport is exactly when the bar becomes stuck.
+(function() {
+  var sentinel = document.getElementById('stickySentinel');
+  var bar      = document.getElementById('stickyBar');
+  if (!sentinel || !bar || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(function(entries) {
+    bar.classList.toggle('stuck', !entries[0].isIntersecting);
+  }).observe(sentinel);
+})();
 
 document.getElementById('sortSelect').addEventListener('change', function(e) {
   curSort = e.target.value;
