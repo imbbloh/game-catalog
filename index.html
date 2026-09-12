@@ -992,6 +992,15 @@ function platClass(g) {
   return 'unk';
 }
 
+// Codes are badged by what they unlock. Reuses the Codes sub-filter predicates
+// so the badge and the filter can never disagree about what counts as a DLC or
+// an upgrade pack.
+function codeLabel(g) {
+  if (SUB_MATCH.upg(g)) return 'Code - Upgrade Pack';
+  if (SUB_MATCH.dlc(g)) return 'Code - DLC';
+  return 'Code';
+}
+
 // Footer link text per platform. Codes are eShop redemptions, so they point at
 // the eShop like Switch cards do.
 var STORE_LABEL = {
@@ -1003,7 +1012,7 @@ var STORE_LABEL = {
 // ── Render one card ─────────────────────────────────────────────────────────
 function makeCard(game) {
   var pc       = platClass(game);
-  var platLbl  = (pc === 'code') ? 'Code' : (game.platform || (pc === 'ns' ? 'Nintendo' : pc === 'ps' ? 'PlayStation' : ''));
+  var platLbl  = (pc === 'code') ? codeLabel(game) : (game.platform || (pc === 'ns' ? 'Nintendo' : pc === 'ps' ? 'PlayStation' : ''));
   var rawUrl   = game.storeUrl || '';
   var fullUrl  = rawUrl.startsWith('http') ? rawUrl : ''; // only use real URLs
 
