@@ -182,11 +182,12 @@ header {
 .f-pill:hover .pill-ico,
 .f-pill.on   .pill-ico { opacity: 1; }
 
-/* Same icon on the code price row, tinted with the colour codes use elsewhere. */
+/* Same icon on the code price row. Yellow to match the card's CODE badge and
+   the price beside it. */
 .p-lbl .lbl-ico {
   width: 12px; height: 12px;
   vertical-align: -2px; margin-right: 4px;
-  color: var(--green);
+  color: var(--accent);
 }
 
 .f-pill.fa  { }
@@ -365,7 +366,7 @@ header {
 .p-val { font-family: 'DM Mono', monospace; font-size: .78rem; font-weight: 500; }
 .pv-n  { color: var(--accent); }
 .pv-p  { color: var(--green); }
-.pv-s  { color: var(--green); }
+.pv-s  { color: var(--accent); }   /* code price — yellow, like the CODE badge */
 
 /* ── Card footer ── */
 .card-footer {
