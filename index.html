@@ -143,6 +143,90 @@ header {
 #searchInput:focus { border-color: var(--accent); }
 #searchInput::placeholder { color: var(--muted); opacity: .5; }
 
+/* ── Header actions ── */
+.h-actions { display: flex; align-items: center; gap: 7px; }
+.hb-ico { width: 15px; height: 15px; flex-shrink: 0; display: block; }
+
+.hbtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 11px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  cursor: pointer; text-decoration: none;
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: .64rem;
+  letter-spacing: .06em; text-transform: uppercase;
+  -webkit-tap-highlight-color: transparent; transition: all .15s;
+}
+/* `hidden` alone loses to the display rule above, so state it explicitly —
+   otherwise an unset link still renders and points nowhere. */
+.hbtn[hidden], .fitem[hidden] { display: none; }
+.hbtn:hover { color: var(--text); border-color: #3a3a48; }
+.hbtn.tg:hover { color: #29a7e1; border-color: #29a7e1; }
+.hbtn.primary { background: var(--accent); border-color: var(--accent); color: #0d0d10; }
+.hbtn.primary:hover { filter: brightness(1.08); color: #0d0d10; }
+
+/* ── FAQ panel ── */
+.ovl {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(5,5,8,.72); backdrop-filter: blur(3px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 16px; overflow-y: auto;
+}
+.ovl[hidden] { display: none; }
+.sheet {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  max-width: 640px; width: 100%; padding: 22px 24px 18px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.7);
+}
+.sheet h2 {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem;
+  display: flex; align-items: center; gap: 9px;
+}
+.sheet h2 .x {
+  margin-left: auto; background: none; border: 0; color: var(--muted);
+  font-size: 1.5rem; line-height: 1; cursor: pointer; padding: 0 2px;
+}
+.sheet h2 .x:hover { color: var(--text); }
+.qa { border-top: 1px solid #22242e; }
+.qa:first-of-type { margin-top: 14px; }
+.q {
+  width: 100%; text-align: left; background: none; border: 0; cursor: pointer;
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: .85rem;
+  font-weight: 500; padding: 12px 26px 12px 0; position: relative;
+}
+.q::after { content: '+'; position: absolute; right: 4px; top: 11px; color: var(--muted); font-size: 1.1rem; }
+.qa.open .q::after { content: '\2013'; }
+.a { display: none; color: #9a9aae; font-size: .8rem; line-height: 1.65; padding: 0 0 13px; }
+.qa.open .a { display: block; }
+
+/* ── Floating contact ── */
+/* Shown only where there's a real pointer and room for it, so phones are untouched. */
+.fab-wrap {
+  position: fixed; right: 22px; bottom: 22px; z-index: 150;
+  display: none; flex-direction: column; align-items: flex-end; gap: 9px;
+}
+.fab-wrap[hidden] { display: none; }
+@media (hover: hover) and (min-width: 720px) { .fab-wrap:not([hidden]) { display: flex; } }
+.fab {
+  width: 50px; height: 50px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface); color: var(--accent);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 22px rgba(0,0,0,.6); transition: all .18s;
+}
+.fab:hover { transform: translateY(-2px); border-color: var(--accent); }
+.fab-ico { width: 21px; height: 21px; }
+.fmenu { display: none; flex-direction: column; gap: 7px; align-items: flex-end; }
+.fab-wrap.open .fmenu { display: flex; }
+.fitem {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-radius: 24px; white-space: nowrap;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  text-decoration: none; font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: .66rem; letter-spacing: .05em; text-transform: uppercase;
+  box-shadow: 0 6px 18px rgba(0,0,0,.5); transition: all .15s;
+}
+.fitem:hover { transform: translateX(-2px); }
+.fitem.tg:hover { border-color: #29a7e1; color: #29a7e1; }
+
 /* ── Controls ── */
 .controls {
   display: flex; align-items: center;
@@ -436,6 +520,12 @@ header {
   #searchInput { padding: 10px 38px 10px 38px; font-size: .9rem; }
   .search-wrap { margin-bottom: 8px; }
   .sticky-bar { padding-top: 6px; }
+
+  /* Labels would wrap the header onto two rows here, so collapse to icons. */
+  .hb-lbl { display: none; }
+  .hbtn { padding: 7px; }
+  .h-actions { gap: 5px; }
+  .sheet { padding: 18px 16px 14px; }
 }
 </style>
 </head>
@@ -448,6 +538,15 @@ header {
 <svg width="0" height="0" aria-hidden="true" style="position:absolute">
   <symbol id="ico-code" viewBox="0 0 24 24">
     <path fill="currentColor" fill-rule="evenodd" d="M4.8 5h14.4a2.8 2.8 0 0 1 2.8 2.8v8.4a2.8 2.8 0 0 1-2.8 2.8H4.8A2.8 2.8 0 0 1 2 16.2V7.8A2.8 2.8 0 0 1 4.8 5z M2 9.6h20v1.8H2z M7 13.85a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 1 0 0-2.3z M11 13.85a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 1 0 0-2.3z M15 13.85a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 1 0 0-2.3z"/>
+  </symbol>
+  <symbol id="ico-telegram" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M21.9 4.3 18.8 19c-.2 1-.9 1.3-1.7.8l-4.6-3.4-2.2 2.2c-.3.3-.5.4-.9.4l.3-4.6L18.3 7c.4-.3-.1-.5-.6-.2L7.3 13.3l-4.5-1.4c-1-.3-1-1 .2-1.5l17.5-6.7c.8-.3 1.6.2 1.4 1.6z"/>
+  </symbol>
+  <symbol id="ico-cart" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M4.6 7.6h14.8l-1.2 11.2a2.1 2.1 0 0 1-2.1 1.9H7.9a2.1 2.1 0 0 1-2.1-1.9zM8.7 7.6V6a3.3 3.3 0 0 1 6.6 0v1.6h-2.1V6a1.2 1.2 0 0 0-2.4 0v1.6z"/>
+  </symbol>
+  <symbol id="ico-faq" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M12 2.6a9.4 9.4 0 1 0 0 18.8 9.4 9.4 0 0 0 0-18.8zm.1 14.9a1.2 1.2 0 1 1 0-2.5 1.2 1.2 0 0 1 0 2.5zm1.7-5.4c-.7.5-.8.8-.8 1.4v.3h-1.9v-.5c0-1.2.4-1.9 1.4-2.6.8-.6 1-.9 1-1.4 0-.6-.5-1-1.3-1-.9 0-1.5.5-1.6 1.4H8.7c.1-1.9 1.5-3.1 3.5-3.1 2.1 0 3.4 1.1 3.4 2.7 0 1-.4 1.7-1.8 2.8z"/>
   </symbol>
 </svg>
 
@@ -464,7 +563,17 @@ header {
         <p>game catalog</p>
       </div>
     </a>
-    <div class="live-badge"><div class="dot"></div>Live</div>
+    <div class="h-actions">
+      <button type="button" class="hbtn" id="faqOpen">
+        <svg class="hb-ico" aria-hidden="true"><use href="#ico-faq"/></svg><span class="hb-lbl">FAQ</span>
+      </button>
+      <a class="hbtn tg" id="lnkTelegram" hidden target="_blank" rel="noopener">
+        <svg class="hb-ico" aria-hidden="true"><use href="#ico-telegram"/></svg><span class="hb-lbl">Telegram</span>
+      </a>
+      <a class="hbtn primary" id="lnkCarousell" hidden target="_blank" rel="noopener">
+        <svg class="hb-ico" aria-hidden="true"><use href="#ico-cart"/></svg><span class="hb-lbl">Buy on Carousell</span>
+      </a>
+    </div>
   </header>
 
   <!-- Sentinel: once this scrolls out of view the bar below is pinned, which is
@@ -529,6 +638,55 @@ header {
     <div class="skel"></div><div class="skel"></div>
   </div>
 
+</div><!-- /.app -->
+
+<!-- FAQ panel. Opens over the catalogue — no extra page, no navigation. -->
+<div class="ovl" id="faqOvl" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Frequently asked questions">
+    <h2><svg class="hb-ico" aria-hidden="true"><use href="#ico-faq"/></svg>Frequently asked
+      <button type="button" class="x" id="faqClose" aria-label="Close">&times;</button></h2>
+    <div class="qa">
+      <button type="button" class="q">What exactly am I buying?</button>
+      <div class="a">Every item here is a digital download for the Nintendo eShop or the PlayStation Store. Nothing is posted to you — you receive a code to redeem.</div>
+    </div>
+    <div class="qa">
+      <button type="button" class="q">A game says &ldquo;Switch 1&amp;2&rdquo;. Do I need a Switch 2?</button>
+      <div class="a">No. <b>Switch 1&amp;2</b> runs on both consoles. <b>Switch 2</b> means that edition is for the Switch&nbsp;2 only — use the Nintendo filter to narrow to one or the other.</div>
+    </div>
+    <div class="qa">
+      <button type="button" class="q">What is an Upgrade Pack?</button>
+      <div class="a">It upgrades a game you already own to its Switch&nbsp;2 Edition. It is not the full game, so you need the base game first.</div>
+    </div>
+    <div class="qa">
+      <button type="button" class="q">What does DLC mean?</button>
+      <div class="a">Add-on content for a game you already own, such as an expansion pass. It is not playable on its own.</div>
+    </div>
+    <div class="qa">
+      <button type="button" class="q">How do I order?</button>
+      <div class="a">Tap any game to open its Carousell listing, or message me directly on Telegram.</div>
+    </div>
+    <!-- TODO — the four buyers ask most, left out rather than guessed because a
+         wrong answer here costs a sale. Copy a .qa block above and fill in:
+           • difference between Normal and Premium
+           • how fast delivery is, and how the code is sent
+           • which payment methods you accept
+           • what happens if a code does not work                                -->
+  </div>
+</div>
+
+<!-- Floating contact. Pointer devices only (see CSS) — hidden on touch and narrow screens. -->
+<div class="fab-wrap" id="fabWrap" hidden>
+  <div class="fmenu">
+    <a class="fitem tg" id="fabTelegram" hidden target="_blank" rel="noopener">
+      <svg class="hb-ico" aria-hidden="true"><use href="#ico-telegram"/></svg>Message on Telegram
+    </a>
+    <a class="fitem" id="fabCarousell" hidden target="_blank" rel="noopener">
+      <svg class="hb-ico" aria-hidden="true"><use href="#ico-cart"/></svg>Buy on Carousell
+    </a>
+  </div>
+  <button type="button" class="fab" id="fabBtn" aria-label="Contact">
+    <svg class="fab-ico" aria-hidden="true"><use href="#ico-telegram"/></svg>
+  </button>
 </div>
 <script>
 // ── Config ─────────────────────────────────────────────────────────────────
@@ -1390,6 +1548,70 @@ directLoad.then(function(games) {
     render();
   }
 }).catch(function() {});
+
+// ── Contact links ───────────────────────────────────────────────────────────
+// Fill these in and the buttons appear. Left empty, every Telegram/Carousell
+// button stays hidden — better than shipping a "Buy on Carousell" button that
+// goes nowhere.
+var CONTACT = {
+  telegram:  '',   // e.g. 'https://t.me/your_handle'
+  carousell: '',   // e.g. 'https://www.carousell.sg/u/your_username'
+};
+
+(function contactLinks() {
+  var wire = function(id, url) {
+    var el = document.getElementById(id);
+    if (!el) return false;
+    if (!url) return false;
+    el.href = url;
+    el.hidden = false;
+    return true;
+  };
+  var tg = wire('lnkTelegram', CONTACT.telegram);
+  var cs = wire('lnkCarousell', CONTACT.carousell);
+  var ftg = wire('fabTelegram', CONTACT.telegram);
+  var fcs = wire('fabCarousell', CONTACT.carousell);
+  // no destinations, no floating button
+  if (ftg || fcs) document.getElementById('fabWrap').hidden = false;
+  void tg; void cs;
+})();
+
+// ── FAQ panel ───────────────────────────────────────────────────────────────
+(function faqPanel() {
+  var ovl = document.getElementById('faqOvl');
+  var open = function() { ovl.hidden = false; document.body.style.overflow = 'hidden'; };
+  var shut = function() { ovl.hidden = true;  document.body.style.overflow = ''; };
+  document.getElementById('faqOpen').addEventListener('click', open);
+  document.getElementById('faqClose').addEventListener('click', shut);
+  // click the backdrop, not the sheet
+  ovl.addEventListener('click', function(e) { if (e.target === ovl) shut(); });
+  // one open at a time reads better than a wall of expanded text
+  ovl.querySelectorAll('.q').forEach(function(q) {
+    q.addEventListener('click', function() {
+      var qa = q.parentNode, wasOpen = qa.classList.contains('open');
+      ovl.querySelectorAll('.qa').forEach(function(o) { o.classList.remove('open'); });
+      if (!wasOpen) qa.classList.add('open');
+    });
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !ovl.hidden) shut();
+  });
+})();
+
+// ── Floating contact ────────────────────────────────────────────────────────
+(function floatingContact() {
+  var wrap = document.getElementById('fabWrap');
+  document.getElementById('fabBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    wrap.classList.toggle('open');
+  });
+  document.addEventListener('click', function(e) {
+    if (!wrap.contains(e.target)) wrap.classList.remove('open');
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') wrap.classList.remove('open');
+  });
+})();
 
 // ── Events ──────────────────────────────────────────────────────────────────
 var searchEl = document.getElementById('searchInput');
