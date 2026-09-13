@@ -27,6 +27,7 @@
   --text:     #eeeef2;
   --muted:    #7a7a90;
   --green:    #3ecf7e;
+  --code:     #ffdc00;   /* codes — brighter than --accent so it reads as its own colour, not the Normal price */
   --blue:     #0070d1;
   --red:      #e00000;
   --radius:   14px;
@@ -187,14 +188,14 @@ header {
 .p-lbl .lbl-ico {
   width: 12px; height: 12px;
   vertical-align: -2px; margin-right: 4px;
-  color: var(--accent);
+  color: var(--code);
 }
 
 .f-pill.fa  { }
 .f-pill.fa.on  { background: var(--accent);               color: #0d0d10;  border-color: var(--accent); }
 .f-pill.fns.on { background: rgba(224,0,0,.15);           color: #ff5555;  border-color: #e00000; }
 .f-pill.fps.on { background: rgba(0,112,209,.15);         color: #44aaff;  border-color: var(--blue); }
-.f-pill.fco.on { background: rgba(240,193,64,.15);        color: var(--accent); border-color: var(--accent); }
+.f-pill.fco.on { background: rgba(255,220,0,.14);         color: var(--code); border-color: var(--code); }
 
 /* Hovering previews the active look: the label and border pick up the pill's
    own colour alongside the logo, instead of the logo lighting up on its own.
@@ -204,7 +205,7 @@ header {
   .f-pill.fa:not(.on):hover  { color: var(--accent);  border-color: rgba(240,193,64,.45); }
   .f-pill.fns:not(.on):hover { color: #ff5555;        border-color: rgba(224,0,0,.55); }
   .f-pill.fps:not(.on):hover { color: #44aaff;        border-color: rgba(0,112,209,.55); }
-  .f-pill.fco:not(.on):hover { color: var(--accent);  border-color: rgba(240,193,64,.55); }
+  .f-pill.fco:not(.on):hover { color: var(--code);    border-color: rgba(255,220,0,.55); }
 }
 
 /* ── Filter pill dropdowns ── */
@@ -289,7 +290,7 @@ header {
    specificity, later rule takes it. Code and unknown cards stay neutral. */
 .game-card.tint-ns { border-color: rgba(255,45,70,.45); box-shadow: 0 0 6px rgba(255,45,70,.12); }
 .game-card.tint-ps { border-color: rgba(50,170,255,.45); box-shadow: 0 0 6px rgba(50,170,255,.12); }
-.game-card.tint-code { border-color: rgba(240,193,64,.42); box-shadow: 0 0 6px rgba(240,193,64,.12); }
+.game-card.tint-code { border-color: rgba(255,220,0,.40); box-shadow: 0 0 6px rgba(255,220,0,.12); }
 
 .game-card:hover {
   border-color: var(--accent);
@@ -342,7 +343,7 @@ header {
 
 .plat-strip.ns   { background: rgba(200,0,10,.82); color: #fff; }
 .plat-strip.ps   { background: rgba(0,48,135,.82); color: #fff; }
-.plat-strip.code { background: rgba(240,193,64,.94); color: #2a1f00; }
+.plat-strip.code { background: rgba(255,220,0,.94); color: #2a2200; }
 .plat-strip.unk  { background: rgba(30,30,38,.82); color: var(--muted); }
 
 /* ── Card body ── */
@@ -367,7 +368,7 @@ header {
 .p-val { font-family: 'DM Mono', monospace; font-size: .78rem; font-weight: 500; }
 .pv-n  { color: var(--accent); }
 .pv-p  { color: var(--green); }
-.pv-s  { color: var(--accent); }
+.pv-s  { color: var(--code); }
 
 /* ── Card footer ── */
 .card-footer {
@@ -502,7 +503,7 @@ header {
     <span class="ss">/</span>
     <span id="statPS"   style="color:#44aaff">PS 0</span>
     <span class="ss">/</span>
-    <span id="statCode" style="color:var(--accent)">Code 0</span>
+    <span id="statCode" style="color:var(--code)">Code 0</span>
   </div>
 
   <div class="game-grid" id="gameGrid">
