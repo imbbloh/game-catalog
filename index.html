@@ -27,10 +27,6 @@
   --text:     #eeeef2;
   --muted:    #7a7a90;
   --green:    #3ecf7e;
-  /* Codes. Deliberately not a hue: yellow and green are taken by the Normal and
-     Premium price tiers, and red/blue by the two platforms, so any hue would
-     collide with something. Silver reads as the foil of a code card instead. */
-  --silver:   #dde5ee;
   --blue:     #0070d1;
   --red:      #e00000;
   --radius:   14px;
@@ -191,14 +187,14 @@ header {
 .p-lbl .lbl-ico {
   width: 12px; height: 12px;
   vertical-align: -2px; margin-right: 4px;
-  color: var(--silver);
+  color: var(--green);
 }
 
 .f-pill.fa  { }
 .f-pill.fa.on  { background: var(--accent);               color: #0d0d10;  border-color: var(--accent); }
 .f-pill.fns.on { background: rgba(224,0,0,.15);           color: #ff5555;  border-color: #e00000; }
 .f-pill.fps.on { background: rgba(0,112,209,.15);         color: #44aaff;  border-color: var(--blue); }
-.f-pill.fco.on { background: rgba(221,229,238,.14);       color: var(--silver); border-color: rgba(221,229,238,.7); }
+.f-pill.fco.on { background: rgba(62,207,126,.15);        color: var(--green); border-color: var(--green); }
 
 /* Hovering previews the active look: the label and border pick up the pill's
    own colour alongside the logo, instead of the logo lighting up on its own.
@@ -208,7 +204,7 @@ header {
   .f-pill.fa:not(.on):hover  { color: var(--accent);  border-color: rgba(240,193,64,.45); }
   .f-pill.fns:not(.on):hover { color: #ff5555;        border-color: rgba(224,0,0,.55); }
   .f-pill.fps:not(.on):hover { color: #44aaff;        border-color: rgba(0,112,209,.55); }
-  .f-pill.fco:not(.on):hover { color: var(--silver);  border-color: rgba(221,229,238,.5); }
+  .f-pill.fco:not(.on):hover { color: var(--green);   border-color: rgba(62,207,126,.55); }
 }
 
 /* ── Filter pill dropdowns ── */
@@ -293,7 +289,7 @@ header {
    specificity, later rule takes it. Code and unknown cards stay neutral. */
 .game-card.tint-ns { border-color: rgba(255,45,70,.45); box-shadow: 0 0 6px rgba(255,45,70,.12); }
 .game-card.tint-ps { border-color: rgba(50,170,255,.45); box-shadow: 0 0 6px rgba(50,170,255,.12); }
-.game-card.tint-code { border-color: rgba(221,229,238,.28); box-shadow: 0 0 6px rgba(221,229,238,.09); }
+.game-card.tint-code { border-color: rgba(62,207,126,.42); box-shadow: 0 0 6px rgba(62,207,126,.12); }
 
 .game-card:hover {
   border-color: var(--accent);
@@ -346,13 +342,7 @@ header {
 
 .plat-strip.ns   { background: rgba(200,0,10,.82); color: #fff; }
 .plat-strip.ps   { background: rgba(0,48,135,.82); color: #fff; }
-/* Metallic sweep rather than a flat fill — the sheen is what makes it read as
-   a foil code card instead of a grey chip. */
-.plat-strip.code {
-  background: linear-gradient(135deg, #f2f6fa 0%, #c3cfdd 48%, #eef3f8 100%);
-  color: #1a1f28;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.5);
-}
+.plat-strip.code { background: rgba(62,207,126,.94); color: #04220f; }
 .plat-strip.unk  { background: rgba(30,30,38,.82); color: var(--muted); }
 
 /* ── Card body ── */
@@ -377,7 +367,7 @@ header {
 .p-val { font-family: 'DM Mono', monospace; font-size: .78rem; font-weight: 500; }
 .pv-n  { color: var(--accent); }
 .pv-p  { color: var(--green); }
-.pv-s  { color: var(--silver); }   /* code price */
+.pv-s  { color: var(--green); }
 
 /* ── Card footer ── */
 .card-footer {
