@@ -173,6 +173,22 @@ header {
 .f-pill:hover .pill-logo,
 .f-pill.on   .pill-logo { opacity: 1; filter: none; }
 
+/* The code icon is drawn in currentColor, so it takes the pill's own colour —
+   no grayscale filter here, which would only wash that colour out. */
+.pill-ico {
+  width: 13px; height: 13px; flex-shrink: 0;
+  opacity: .6; transition: opacity .15s;
+}
+.f-pill:hover .pill-ico,
+.f-pill.on   .pill-ico { opacity: 1; }
+
+/* Same icon on the code price row, tinted with the colour codes use elsewhere. */
+.p-lbl .lbl-ico {
+  width: 12px; height: 12px;
+  vertical-align: -2px; margin-right: 4px;
+  color: var(--green);
+}
+
 .f-pill.fa  { }
 .f-pill.fa.on  { background: var(--accent);               color: #0d0d10;  border-color: var(--accent); }
 .f-pill.fns.on { background: rgba(224,0,0,.15);           color: #ff5555;  border-color: #e00000; }
@@ -404,6 +420,17 @@ header {
 </style>
 </head>
 <body>
+
+<!-- Icon sprite. Defined once and referenced with <use>, so the geometry isn't
+     duplicated per card and no element id repeats. One evenodd path — the band
+     and dots are holes in the card, not separate strokes — so it reads on the
+     dark pill and the yellow badge alike and holds together at 13px. -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <symbol id="ico-code" viewBox="0 0 24 24">
+    <path fill="currentColor" fill-rule="evenodd" d="M4.8 5h14.4a2.8 2.8 0 0 1 2.8 2.8v8.4a2.8 2.8 0 0 1-2.8 2.8H4.8A2.8 2.8 0 0 1 2 16.2V7.8A2.8 2.8 0 0 1 4.8 5z M2 9.6h20v1.8H2z M7 13.85a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 1 0 0-2.3z M11 13.85a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 1 0 0-2.3z M15 13.85a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 1 0 0-2.3z"/>
+  </symbol>
+</svg>
+
 <div class="app">
 
   <header>
@@ -449,7 +476,7 @@ header {
         </div>
       </div>
       <div class="pill-wrap">
-        <button class="f-pill fco" data-f="code">🔑 Codes<span class="pill-caret" aria-hidden="true">▾</span></button>
+        <button class="f-pill fco" data-f="code"><svg class="pill-ico" aria-hidden="true"><use href="#ico-code"/></svg>Codes<span class="pill-caret" aria-hidden="true">▾</span></button>
         <div class="pill-menu">
           <button class="pill-opt" data-f="code" data-sub="upg">Upgrade Pack</button>
           <button class="pill-opt" data-f="code" data-sub="dlc">DLC</button>
@@ -1146,7 +1173,7 @@ function makeCard(game) {
     pricesEl.appendChild(pRow('🟡 Normal',  '$' + game.normalPrice.toFixed(2),  'pv-n'));
     pricesEl.appendChild(pRow('🟢 Premium', '$' + game.premiumPrice.toFixed(2), 'pv-p'));
   } else if (game.codePrice !== null) {
-    pricesEl.appendChild(pRow('🔑 Price', '$' + game.codePrice.toFixed(2), 'pv-s'));
+    pricesEl.appendChild(pRow('Price', '$' + game.codePrice.toFixed(2), 'pv-s', 'ico-code'));
   } else if (game.normalPrice !== null) {
     pricesEl.appendChild(pRow('From', '$' + game.normalPrice.toFixed(2), 'pv-n'));
   } else if (game.premiumPrice !== null) {
@@ -1172,9 +1199,14 @@ function makeCard(game) {
   return card;
 }
 
-function pRow(label, value, cls) {
+// `icon` names a sprite symbol to place before the label. The icon goes in via
+// innerHTML because it's SVG markup, but the label itself stays a text node —
+// nothing dynamic is ever parsed as HTML.
+function pRow(label, value, cls, icon) {
   var row = document.createElement('div'); row.className = 'p-row';
-  var l = document.createElement('span'); l.className = 'p-lbl'; l.textContent = label;
+  var l = document.createElement('span'); l.className = 'p-lbl';
+  if (icon) l.innerHTML = '<svg class="lbl-ico" aria-hidden="true"><use href="#' + icon + '"/></svg>';
+  l.appendChild(document.createTextNode(label));
   var v = document.createElement('span'); v.className = 'p-val ' + cls; v.textContent = value;
   row.appendChild(l); row.appendChild(v);
   return row;
