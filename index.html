@@ -228,6 +228,7 @@ header {
 .pill-wrap.open .pill-menu { display: flex; }
 
 .pill-opt {
+  display: inline-flex; align-items: center; gap: 7px;
   background: transparent; border: 0; cursor: pointer; text-align: left;
   padding: 6px 11px; border-radius: 6px; white-space: nowrap;
   font-family: 'Syne', sans-serif; font-weight: 700; font-size: .63rem;
@@ -237,6 +238,22 @@ header {
 }
 .pill-opt:hover { background: rgba(255,255,255,.07); color: var(--text); }
 .pill-opt.on    { background: rgba(255,255,255,.10); color: var(--text); }
+
+/* Sub-options carry their parent pill's mark. The brand SVGs have fixed fills so
+   they dim via opacity like .pill-logo does; the code icon is currentColor and
+   only needs the opacity step. */
+.opt-logo {
+  width: 13px; height: 13px; flex-shrink: 0; object-fit: contain;
+  opacity: .5; filter: grayscale(.45); transition: opacity .12s, filter .12s;
+}
+.pill-opt:hover .opt-logo,
+.pill-opt.on    .opt-logo { opacity: 1; filter: none; }
+.opt-ico {
+  width: 13px; height: 13px; flex-shrink: 0;
+  opacity: .6; transition: opacity .12s;
+}
+.pill-opt:hover .opt-ico,
+.pill-opt.on    .opt-ico { opacity: 1; }
 
 .sort-select {
   background: var(--surface); border: 1px solid var(--border);
@@ -467,22 +484,22 @@ header {
       <div class="pill-wrap">
         <button class="f-pill fns" data-f="ns"><img class="pill-logo" src="assets/nintendo-switch.svg" alt="" aria-hidden="true">Nintendo<span class="pill-caret" aria-hidden="true">▾</span></button>
         <div class="pill-menu">
-          <button class="pill-opt" data-f="ns" data-sub="sw1">Switch 1</button>
-          <button class="pill-opt" data-f="ns" data-sub="sw2">Switch 2</button>
+          <button class="pill-opt" data-f="ns" data-sub="sw1"><img class="opt-logo" src="assets/nintendo-switch.svg" alt="" aria-hidden="true">Switch 1</button>
+          <button class="pill-opt" data-f="ns" data-sub="sw2"><img class="opt-logo" src="assets/nintendo-switch.svg" alt="" aria-hidden="true">Switch 2</button>
         </div>
       </div>
       <div class="pill-wrap">
         <button class="f-pill fps" data-f="ps"><img class="pill-logo" src="assets/playstation.svg" alt="" aria-hidden="true">PlayStation<span class="pill-caret" aria-hidden="true">▾</span></button>
         <div class="pill-menu">
-          <button class="pill-opt" data-f="ps" data-sub="ps4">PS4</button>
-          <button class="pill-opt" data-f="ps" data-sub="ps5">PS5</button>
+          <button class="pill-opt" data-f="ps" data-sub="ps4"><img class="opt-logo" src="assets/playstation.svg" alt="" aria-hidden="true">PS4</button>
+          <button class="pill-opt" data-f="ps" data-sub="ps5"><img class="opt-logo" src="assets/playstation.svg" alt="" aria-hidden="true">PS5</button>
         </div>
       </div>
       <div class="pill-wrap">
         <button class="f-pill fco" data-f="code"><svg class="pill-ico" aria-hidden="true"><use href="#ico-code"/></svg>Codes<span class="pill-caret" aria-hidden="true">▾</span></button>
         <div class="pill-menu">
-          <button class="pill-opt" data-f="code" data-sub="upg">Upgrade Pack</button>
-          <button class="pill-opt" data-f="code" data-sub="dlc">DLC</button>
+          <button class="pill-opt" data-f="code" data-sub="upg"><svg class="opt-ico" aria-hidden="true"><use href="#ico-code"/></svg>Upgrade Pack</button>
+          <button class="pill-opt" data-f="code" data-sub="dlc"><svg class="opt-ico" aria-hidden="true"><use href="#ico-code"/></svg>DLC</button>
         </div>
       </div>
     </div>
