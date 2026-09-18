@@ -170,6 +170,10 @@ header {
 }
 .hbtn.tg:hover { color: #7fd0f7; border-color: #29a7e1; background: rgba(41,167,225,.2); }
 
+/* The two destinations share a width so they read as a pair, rather than
+   sizing themselves to whatever their labels happen to be. */
+.hbtn.tg, .hbtn.primary { min-width: 118px; justify-content: center; }
+
 .hbtn.primary { background: var(--accent); border-color: var(--accent); color: #0d0d10; }
 .hbtn.primary:hover { filter: brightness(1.08); color: #0d0d10; }
 
@@ -538,6 +542,7 @@ header {
   /* Labels would wrap the header onto two rows here, so collapse to icons. */
   .hb-lbl { display: none; }
   .hbtn { padding: 7px; }
+  .hbtn.tg, .hbtn.primary { min-width: 0; }
   .h-actions { gap: 5px; }
   .sheet { padding: 18px 16px 14px; }
 }
@@ -585,7 +590,7 @@ header {
         <svg class="hb-ico" aria-hidden="true"><use href="#ico-telegram"/></svg><span class="hb-lbl">Telegram</span>
       </a>
       <a class="hbtn primary" id="lnkCarousell" hidden target="_blank" rel="noopener">
-        <svg class="hb-ico" aria-hidden="true"><use href="#ico-cart"/></svg><span class="hb-lbl">Buy on Carousell</span>
+        <svg class="hb-ico" aria-hidden="true"><use href="#ico-cart"/></svg><span class="hb-lbl">Carousell</span>
       </a>
     </div>
   </header>
