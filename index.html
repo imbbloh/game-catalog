@@ -462,10 +462,12 @@ header {
 
 .plat-strip.ns   { background: rgba(200,0,10,.82); color: #fff; }
 .plat-strip.ps   { background: rgba(0,48,135,.82); color: #fff; }
-/* Every code in the catalogue is a Switch title, so codes wear Nintendo red
-   like the game badges. The card's yellow border and price are what still tell
-   a code card apart from a Nintendo game card. */
+/* Codes wear their console's colour, matching the game badges — Nintendo red by
+   default since every code in the catalogue today is a Switch title, and
+   PlayStation blue once PlayStation codes exist. The card's yellow border and
+   price are what still tell a code card apart from a game card. */
 .plat-strip.code { background: rgba(200,0,10,.82); color: #fff; }
+.plat-strip.code.on-ps { background: rgba(0,48,135,.82); }
 .plat-strip.unk  { background: rgba(30,30,38,.82); color: var(--muted); }
 
 /* ── Card body ── */
@@ -1260,13 +1262,28 @@ function platClass(g) {
 // Codes are badged by what they unlock. Reuses the Codes sub-filter predicates
 // so the badge and the filter can never disagree about what counts as a DLC or
 // an upgrade pack.
+// Which console family a code belongs to. Drives the badge colour: Switch codes
+// wear Nintendo red, PlayStation codes PlayStation blue.
+function codeFamily(g) {
+  return /ps|play/i.test(g.platform || '') ? 'ps' : 'ns';
+}
+
+// The generation a code is limited to, or '' when it covers both. Mirrors the
+// sub-filters: a value naming the older console covers both and goes unnamed,
+// one naming only the newer is called out.
+function codeGen(g) {
+  if (SUB_MATCH.sw2(g)) return 'Switch 2';
+  if (SUB_MATCH.ps5(g)) return 'PS5';
+  return '';
+}
+
 function codeLabel(g) {
   // An upgrade pack IS the Switch 2 upgrade — every one in the catalog is
   // Switch 2 — so naming the platform as well would just be noise.
   if (SUB_MATCH.upg(g)) return 'Code - Upgrade Pack';
-  var sw2 = SUB_MATCH.sw2(g);
-  if (SUB_MATCH.dlc(g)) return sw2 ? 'Code - Switch 2 DLC' : 'Code - DLC';
-  return sw2 ? 'Code - Switch 2' : 'Code';
+  var gen = codeGen(g);
+  if (SUB_MATCH.dlc(g)) return gen ? 'Code - ' + gen + ' DLC' : 'Code - DLC';
+  return gen ? 'Code - ' + gen : 'Code';
 }
 
 // Footer link text per platform. Codes are eShop redemptions, so they point at
@@ -1336,7 +1353,7 @@ function makeCard(game) {
   // Platform badge
   if (platLbl) {
     var strip = document.createElement('div');
-    strip.className = 'plat-strip ' + pc;
+    strip.className = 'plat-strip ' + pc + (pc === 'code' && codeFamily(game) === 'ps' ? ' on-ps' : '');
     strip.textContent = platLbl;
     coverWrap.appendChild(strip);
   }
