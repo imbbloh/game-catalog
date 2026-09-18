@@ -1553,9 +1553,11 @@ directLoad.then(function(games) {
 // Fill these in and the buttons appear. Left empty, every Telegram/Carousell
 // button stays hidden — better than shipping a "Buy on Carousell" button that
 // goes nowhere.
+// Both need the scheme spelled out — a bare "t.me/..." would resolve as a path
+// on this site, and Android in-app browsers refuse plain http://.
 var CONTACT = {
-  telegram:  '',   // e.g. 'https://t.me/your_handle'
-  carousell: '',   // e.g. 'https://www.carousell.sg/u/your_username'
+  telegram:  'https://t.me/imbblohgames',
+  carousell: 'https://www.carousell.sg/u/im.bbloh/',
 };
 
 (function contactLinks() {
