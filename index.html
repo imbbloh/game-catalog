@@ -160,9 +160,24 @@ header {
    otherwise an unset link still renders and points nowhere. */
 .hbtn[hidden], .fitem[hidden] { display: none; }
 .hbtn:hover { color: var(--text); border-color: #3a3a48; }
-.hbtn.tg:hover { color: #29a7e1; border-color: #29a7e1; }
+
+/* Telegram and Carousell carry their colour at rest, not only on hover — they
+   are destinations, not neutral controls, so they should read as live links
+   before the pointer reaches them. FAQ stays muted: it is a page utility. */
+.hbtn.tg {
+  color: #4cb8ec; border-color: rgba(41,167,225,.55);
+  background: rgba(41,167,225,.12);
+}
+.hbtn.tg:hover { color: #7fd0f7; border-color: #29a7e1; background: rgba(41,167,225,.2); }
+
 .hbtn.primary { background: var(--accent); border-color: var(--accent); color: #0d0d10; }
 .hbtn.primary:hover { filter: brightness(1.08); color: #0d0d10; }
+
+/* Same at rest for the floating fan-out. */
+.fitem.tg { color: #4cb8ec; border-color: rgba(41,167,225,.45); }
+.fitem.tg:hover { color: #7fd0f7; border-color: #29a7e1; }
+.fitem.cs { color: var(--accent); border-color: rgba(240,193,64,.45); }
+.fitem.cs:hover { color: #f7d27a; border-color: var(--accent); }
 
 /* ── FAQ panel ── */
 .ovl {
@@ -225,7 +240,6 @@ header {
   box-shadow: 0 6px 18px rgba(0,0,0,.5); transition: all .15s;
 }
 .fitem:hover { transform: translateX(-2px); }
-.fitem.tg:hover { border-color: #29a7e1; color: #29a7e1; }
 
 /* ── Controls ── */
 .controls {
@@ -676,7 +690,7 @@ header {
     <a class="fitem tg" id="fabTelegram" hidden target="_blank" rel="noopener">
       <svg class="hb-ico" aria-hidden="true"><use href="#ico-telegram"/></svg>Message on Telegram
     </a>
-    <a class="fitem" id="fabCarousell" hidden target="_blank" rel="noopener">
+    <a class="fitem cs" id="fabCarousell" hidden target="_blank" rel="noopener">
       <svg class="hb-ico" aria-hidden="true"><use href="#ico-cart"/></svg>Buy on Carousell
     </a>
   </div>
