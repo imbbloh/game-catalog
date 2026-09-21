@@ -286,10 +286,14 @@ header {
 .f-pill.on   .pill-ico { opacity: 1; }
 
 /* The code price row carries its console's mark — the same asset as the header
-   pill, so it arrives in brand colour rather than inheriting the label's. */
+   pill. The brand fills are baked into those files, so grayscale strips the
+   colour and the brightness lift brings both marks up to roughly the weight of
+   the label text beside them; full grayscale alone lands darker than the text,
+   the Nintendo red especially. */
 .p-lbl .lbl-logo {
   width: 12px; height: 12px; object-fit: contain;
   vertical-align: -2px; margin-right: 4px;
+  filter: grayscale(1) brightness(1.9);
 }
 
 .f-pill.fa  { }
