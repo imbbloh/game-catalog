@@ -1295,10 +1295,15 @@ function codeLabel(g) {
 // Footer link text per platform. Codes are eShop redemptions, so they point at
 // the eShop like Switch cards do.
 var STORE_LABEL = {
-  ns:   'View EShop ↗',
-  ps:   'View PS Store ↗',
-  code: 'View EShop ↗',
+  ns: 'View EShop ↗',
+  ps: 'View PS Store ↗',
 };
+
+// A code redeems in its console's own store, so it takes that platform's label
+// rather than a label of its own — a PlayStation code points at the PS Store.
+function storeLabel(g, pc) {
+  return STORE_LABEL[pc === 'code' ? codeFamily(g) : pc] || 'View Store ↗';
+}
 
 // ── Render one card ─────────────────────────────────────────────────────────
 function makeCard(game) {
@@ -1409,7 +1414,7 @@ function makeCard(game) {
     var a = document.createElement('a');
     a.href = fullUrl; a.target = '_blank'; a.rel = 'noopener';
     // Name the destination store per platform; unknown platforms stay generic.
-    a.className = 'view-link'; a.textContent = STORE_LABEL[pc] || 'View Store ↗';
+    a.className = 'view-link'; a.textContent = storeLabel(game, pc);
     a.addEventListener('click', function(e) { e.stopPropagation(); });
     footer.appendChild(a);
     card.appendChild(footer);
