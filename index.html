@@ -365,6 +365,36 @@ header {
 .pill-opt:hover .opt-ico,
 .pill-opt.on    .opt-ico { opacity: 1; }
 
+/* Third level: the Codes menu splits by console first, then by the cut within
+   it. The flyout opens to the right of its subheader. */
+.opt-wrap { position: relative; display: flex; }
+.opt-wrap > .pill-opt { flex: 1 1 auto; }
+.opt-caret { margin-left: auto; padding-left: 10px; font-size: .9em; opacity: .5; }
+
+.opt-menu {
+  position: absolute; left: calc(100% + 5px); top: -5px; z-index: 31;
+  padding: 4px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 10px 26px rgba(0,0,0,.55);
+  display: none; flex-direction: column; gap: 2px;
+}
+/* bridges the horizontal gap, same trick as .pill-menu::before */
+.opt-menu::before { content: ''; position: absolute; top: 0; bottom: 0; left: -6px; width: 6px; }
+
+@media (hover: hover) { .opt-wrap:hover .opt-menu { display: flex; } }
+.opt-wrap.open .opt-menu { display: flex; }
+
+/* No room for a side flyout on a phone, and no hover to open it either — so
+   there the third level indents underneath its subheader instead. */
+@media (max-width: 719px) {
+  .opt-wrap { flex-direction: column; align-items: stretch; }
+  .opt-menu {
+    position: static; padding: 2px 0 2px 16px;
+    background: none; border: 0; box-shadow: none; border-radius: 0;
+  }
+  .opt-menu::before { display: none; }
+}
+
 .sort-select {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 9px; color: var(--muted);
@@ -639,8 +669,22 @@ header {
       <div class="pill-wrap">
         <button class="f-pill fco" data-f="code"><svg class="pill-ico" aria-hidden="true"><use href="#ico-code"/></svg>Codes<span class="pill-caret" aria-hidden="true">▾</span></button>
         <div class="pill-menu">
-          <button class="pill-opt" data-f="code" data-sub="upg"><svg class="opt-ico" aria-hidden="true"><use href="#ico-code"/></svg>Upgrade Pack</button>
-          <button class="pill-opt" data-f="code" data-sub="dlc"><svg class="opt-ico" aria-hidden="true"><use href="#ico-code"/></svg>DLC</button>
+          <div class="opt-wrap">
+            <button class="pill-opt" data-f="code" data-sub="cns"><img class="opt-logo" src="assets/nintendo-switch.svg" alt="" aria-hidden="true">Nintendo<span class="opt-caret" aria-hidden="true">▸</span></button>
+            <div class="opt-menu">
+              <button class="pill-opt" data-f="code" data-sub="cns1"><img class="opt-logo" src="assets/nintendo-switch.svg" alt="" aria-hidden="true">Switch 1</button>
+              <button class="pill-opt" data-f="code" data-sub="cns2"><img class="opt-logo" src="assets/nintendo-switch.svg" alt="" aria-hidden="true">Switch 2</button>
+              <button class="pill-opt" data-f="code" data-sub="cupg"><svg class="opt-ico" aria-hidden="true"><use href="#ico-code"/></svg>Upgrade Pack</button>
+              <button class="pill-opt" data-f="code" data-sub="cdlc"><svg class="opt-ico" aria-hidden="true"><use href="#ico-code"/></svg>DLC</button>
+            </div>
+          </div>
+          <div class="opt-wrap">
+            <button class="pill-opt" data-f="code" data-sub="cps"><img class="opt-logo" src="assets/playstation.svg" alt="" aria-hidden="true">PlayStation<span class="opt-caret" aria-hidden="true">▸</span></button>
+            <div class="opt-menu">
+              <button class="pill-opt" data-f="code" data-sub="cps4"><img class="opt-logo" src="assets/playstation.svg" alt="" aria-hidden="true">PS4</button>
+              <button class="pill-opt" data-f="code" data-sub="cps5"><img class="opt-logo" src="assets/playstation.svg" alt="" aria-hidden="true">PS5</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1468,6 +1512,23 @@ var SUB_MATCH = {
   upg: function(g) { return /upgrade\s*pack/i.test(g.title); },
   dlc: function(g) { return /\bdlc\b/i.test(g.title); },
 };
+
+// The Codes menu nests one level deeper: a console subheader, then the cut
+// within it. Each of these reuses the platform tests above rather than
+// restating them, so a change to how "Switch 1&2" is read lands everywhere.
+function codeSub(family, inner) {
+  return function(g) {
+    return codeFamily(g) === family && (!inner || SUB_MATCH[inner](g));
+  };
+}
+SUB_MATCH.cns  = codeSub('ns');
+SUB_MATCH.cns1 = codeSub('ns', 'sw1');
+SUB_MATCH.cns2 = codeSub('ns', 'sw2');
+SUB_MATCH.cupg = codeSub('ns', 'upg');
+SUB_MATCH.cdlc = codeSub('ns', 'dlc');
+SUB_MATCH.cps  = codeSub('ps');
+SUB_MATCH.cps4 = codeSub('ps', 'ps4');
+SUB_MATCH.cps5 = codeSub('ps', 'ps5');
 var curSearch = '';
 var curSort   = 'name';
 
@@ -1716,11 +1777,24 @@ document.getElementById('sortSelect').addEventListener('change', function(e) {
 var FILTER_HASH = { ns: 'nintendo', ps: 'playstation', code: 'codes', all: '' };
 var HASH_FILTER = { nintendo: 'ns', playstation: 'ps', codes: 'code' };
 
-// Sub-filters extend the platform hash: "#nintendo_switch1", "#codes_upgradepack".
-var SUB_HASH = { sw1: 'switch1', sw2: 'switch2', ps4: 'ps4', ps5: 'ps5', upg: 'upgradepack', dlc: 'dlc' };
+// Sub-filters extend the platform hash: "#nintendo_switch1",
+// "#codes_nintendo-switch2". The Codes menu's second level joins with a hyphen
+// because the underscore already separates platform from sub.
+var SUB_HASH = {
+  sw1: 'switch1', sw2: 'switch2', ps4: 'ps4', ps5: 'ps5',
+  cns:  'nintendo',    cns1: 'nintendo-switch1', cns2: 'nintendo-switch2',
+  cupg: 'nintendo-upgradepack', cdlc: 'nintendo-dlc',
+  cps:  'playstation', cps4: 'playstation-ps4',  cps5: 'playstation-ps5',
+};
 // Which platform each sub-filter belongs to, so a mismatched URL like
 // "#nintendo_ps5" drops the sub rather than filtering to nothing.
-var SUB_OF = { sw1: 'ns', sw2: 'ns', ps4: 'ps', ps5: 'ps', upg: 'code', dlc: 'code' };
+var SUB_OF = {
+  sw1: 'ns', sw2: 'ns', ps4: 'ps', ps5: 'ps',
+  cns: 'code', cns1: 'code', cns2: 'code', cupg: 'code', cdlc: 'code',
+  cps: 'code', cps4: 'code', cps5: 'code',
+};
+// Links handed out before the Codes menu grew a console level still work.
+var SUB_ALIAS = { upgradepack: 'nintendo-upgradepack', dlc: 'nintendo-dlc' };
 
 function hashFor(f, sub) {
   var base = FILTER_HASH[f] || '';
@@ -1733,8 +1807,9 @@ function parseHash(h) {
   var f = HASH_FILTER[parts[0]] || 'all';
   var sub = null;
   if (parts[1]) {
+    var want = SUB_ALIAS[parts[1]] || parts[1];
     for (var k in SUB_HASH) {
-      if (SUB_HASH[k] === parts[1] && SUB_OF[k] === f) { sub = k; break; }
+      if (SUB_HASH[k] === want && SUB_OF[k] === f) { sub = k; break; }
     }
   }
   return [f, sub];
@@ -1749,6 +1824,14 @@ function applyFilter(f, sub) {
   document.querySelectorAll('.pill-opt').forEach(function(o) {
     o.classList.toggle('on', curSub !== null && o.dataset.sub === curSub);
   });
+  // A third-level pick also lights its console subheader, so the trail stays
+  // readable — on a phone that flyout sits open underneath it.
+  document.querySelectorAll('.opt-wrap').forEach(function(w) {
+    var head = w.querySelector(':scope > .pill-opt');
+    var inner = w.querySelector('.opt-menu .pill-opt.on');
+    if (inner && head) head.classList.add('on');
+    w.classList.toggle('open', !CAN_HOVER && !!(inner || (head && head.classList.contains('on'))));
+  });
   var hash = hashFor(curFilter, curSub);
   history.replaceState(null, '', hash || location.pathname);
   render();
@@ -1762,13 +1845,19 @@ function closeMenus(except) {
   document.querySelectorAll('.pill-wrap.open').forEach(function(w) {
     if (w !== except) w.classList.remove('open');
   });
+  document.querySelectorAll('.opt-wrap.open').forEach(function(w) {
+    if (!except || !except.contains(w)) w.classList.remove('open');
+  });
 }
 
 document.getElementById('filterPills').addEventListener('click', function(e) {
   var opt = e.target.closest('.pill-opt');
   if (opt) {
     applyFilter(opt.dataset.f, opt.dataset.sub);
-    closeMenus();
+    // A console subheader filters *and* reveals its own level, so tapping it on
+    // a phone must not collapse the menu it just opened.
+    var subWrap = opt.parentElement.classList.contains('opt-wrap') ? opt.parentElement : null;
+    if (!(subWrap && !CAN_HOVER)) closeMenus();
     return;
   }
   var pill = e.target.closest('.f-pill');
