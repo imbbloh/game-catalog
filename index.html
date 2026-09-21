@@ -285,12 +285,11 @@ header {
 .f-pill:hover .pill-ico,
 .f-pill.on   .pill-ico { opacity: 1; }
 
-/* Same icon on the code price row. Yellow to match the card's CODE badge and
-   the price beside it. */
-.p-lbl .lbl-ico {
-  width: 12px; height: 12px;
+/* The code price row carries its console's mark — the same asset as the header
+   pill, so it arrives in brand colour rather than inheriting the label's. */
+.p-lbl .lbl-logo {
+  width: 12px; height: 12px; object-fit: contain;
   vertical-align: -2px; margin-right: 4px;
-  color: var(--code);
 }
 
 .f-pill.fa  { }
@@ -1397,7 +1396,8 @@ function makeCard(game) {
     pricesEl.appendChild(pRow('🟡 Normal',  '$' + game.normalPrice.toFixed(2),  'pv-n'));
     pricesEl.appendChild(pRow('🟢 Premium', '$' + game.premiumPrice.toFixed(2), 'pv-p'));
   } else if (game.codePrice !== null) {
-    pricesEl.appendChild(pRow('Price', '$' + game.codePrice.toFixed(2), 'pv-s', 'ico-code'));
+    pricesEl.appendChild(pRow('Price', '$' + game.codePrice.toFixed(2), 'pv-s',
+      codeFamily(game) === 'ps' ? 'assets/playstation.svg' : 'assets/nintendo-switch.svg'));
   } else if (game.normalPrice !== null) {
     pricesEl.appendChild(pRow('From', '$' + game.normalPrice.toFixed(2), 'pv-n'));
   } else if (game.premiumPrice !== null) {
@@ -1423,13 +1423,17 @@ function makeCard(game) {
   return card;
 }
 
-// `icon` names a sprite symbol to place before the label. The icon goes in via
-// innerHTML because it's SVG markup, but the label itself stays a text node —
-// nothing dynamic is ever parsed as HTML.
-function pRow(label, value, cls, icon) {
+// `iconSrc` is an image placed before the label. Built as an element rather
+// than markup, so nothing is parsed as HTML here at all.
+function pRow(label, value, cls, iconSrc) {
   var row = document.createElement('div'); row.className = 'p-row';
   var l = document.createElement('span'); l.className = 'p-lbl';
-  if (icon) l.innerHTML = '<svg class="lbl-ico" aria-hidden="true"><use href="#' + icon + '"/></svg>';
+  if (iconSrc) {
+    var i = document.createElement('img');
+    i.className = 'lbl-logo'; i.src = iconSrc; i.alt = '';
+    i.setAttribute('aria-hidden', 'true');
+    l.appendChild(i);
+  }
   l.appendChild(document.createTextNode(label));
   var v = document.createElement('span'); v.className = 'p-val ' + cls; v.textContent = value;
   row.appendChild(l); row.appendChild(v);
