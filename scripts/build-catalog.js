@@ -7,9 +7,11 @@ const fs = require('fs');
 const SHEET_ID = '1ly37Y9r-_q44Fp7DpfMVlo_8JdYPHCHwapA6kHy-msw';
 
 const SHEET_TABS = [
-  { tab: 'Nintendo Switch Games',  type: 'ns' },
-  { tab: 'Playstation Games',      type: 'ps' },
-  { tab: 'Digital Codes - Switch', type: 'code' },
+  { tab: 'Nintendo Switch Games',       type: 'ns' },
+  { tab: 'Playstation Games',           type: 'ps' },
+  { tab: 'Digital Codes - Switch',      type: 'code' },
+  // Optional: skipped without error until the tab exists in the sheet.
+  { tab: 'Digital Codes - Playstation', type: 'code', optional: true },
 ];
 
 // Same column rules as index.html: E = store URL, F = eShop title, I = cover.
@@ -167,8 +169,21 @@ async function fetchRawCodeUrls() {
     fetchRawCodeUrls().catch(err => { console.warn('Raw Data - Digital Codes error:', err.message); return {}; }),
   ]);
   const games = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
-  const errs  = results.filter(r => r.status === 'rejected').map(r => r.reason.message);
-  if (errs.length) console.warn('Sheet errors:', errs.join(' | '));
+  // A required tab that fails would silently drop a whole platform from the
+  // snapshot, which is worse than not rebuilding it — so abort and leave the
+  // previous games.json in place. Optional tabs may simply not exist yet.
+  const errs = results
+    .map((r, i) => (r.status === 'rejected' && !SHEET_TABS[i].optional)
+      ? `${SHEET_TABS[i].tab}: ${r.reason.message}` : null)
+    .filter(Boolean);
+  results.forEach((r, i) => {
+    if (r.status === 'rejected' && SHEET_TABS[i].optional)
+      console.log(`Optional tab skipped — ${SHEET_TABS[i].tab}: ${r.reason.message}`);
+  });
+  if (errs.length) {
+    console.error('Required tab(s) failed, refusing to write a partial games.json:\n  ' + errs.join('\n  '));
+    process.exit(1);
+  }
 
   // Raw Data covers take priority; per-tab column I stays as fallback
   let rawHits = 0;

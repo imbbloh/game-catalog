@@ -725,10 +725,13 @@ var ESHOP_TITLE_COL = 5;
 var COVER_COL_OVERRIDE = 8;
 
 // Each entry maps a sheet tab to a listing type
+// `optional: true` means a missing tab yields no rows instead of failing the
+// whole read — for tabs that may not exist in the sheet yet.
 var SHEETS = [
-  { tab: 'Nintendo Switch Games',  type: 'ns' },
-  { tab: 'Playstation Games',      type: 'ps' },
-  { tab: 'Digital Codes - Switch', type: 'code' },
+  { tab: 'Nintendo Switch Games',       type: 'ns' },
+  { tab: 'Playstation Games',           type: 'ps' },
+  { tab: 'Digital Codes - Switch',      type: 'code' },
+  { tab: 'Digital Codes - Playstation', type: 'code', optional: true },
 ];
 
 // Column keyword detection (case-insensitive substring match, first hit wins)
@@ -1224,14 +1227,17 @@ function loadAll() {
     results.forEach(function(r, i) {
       if (r.status === 'fulfilled') {
         all = all.concat(r.value);
+      } else if (SHEETS[i].optional) {
+        console.warn('Optional tab skipped — ' + SHEETS[i].tab + ': ' + r.reason.message);
       } else {
         errs.push((SHEETS[i].tab || 'default') + ': ' + r.reason.message);
       }
     });
-    // Each tab is an entire category, so a failed tab doesn't degrade the
+    // A required tab is an entire category, so losing one doesn't degrade the
     // catalog — it erases a whole platform. Resolving with what's left would
     // publish that gap and, worse, overwrite the complete games.json snapshot
-    // with it. Fail instead, and let the snapshot stand.
+    // with it. Fail instead, and let the snapshot stand. Optional tabs are
+    // exempt: they may simply not exist yet.
     if (errs.length) {
       throw new Error('Sheet tab(s) unavailable — ' + errs.join(' | '));
     }
