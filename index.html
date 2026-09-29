@@ -415,6 +415,56 @@ header {
 .stats-bar strong { color: var(--text); }
 .ss { color: var(--border); padding: 0 3px; }
 
+/* ── Reviews strip ──
+   One row, scrolled sideways, so it costs about 100px of height whatever the
+   review count. Hidden outright until the Reviews tab has rows. */
+.reviews { display: none; margin-bottom: 16px; }
+.reviews.show { display: block; }
+
+.rv-head {
+  display: flex; align-items: baseline; gap: 8px;
+  margin-bottom: 7px; font-size: .7rem;
+  font-family: 'DM Mono', monospace; color: var(--muted);
+}
+.rv-head .rv-score { color: var(--accent); font-weight: 700; }
+.rv-head .rv-all {
+  margin-left: auto; color: var(--muted); text-decoration: none;
+  border-bottom: 1px solid transparent; transition: color .12s, border-color .12s;
+}
+.rv-head .rv-all:hover { color: var(--accent); border-bottom-color: rgba(240,193,64,.5); }
+
+.rv-rail {
+  display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.rv-rail::-webkit-scrollbar { height: 6px; }
+.rv-rail::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.rv-card {
+  flex: 0 0 258px; scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+}
+.rv-stars { color: var(--accent); font-size: .72rem; letter-spacing: .08em; }
+/* Three lines is the most that fits without the strip growing taller than the
+   rest of the page furniture; the full text is a tap away on Carousell. */
+.rv-text {
+  font-size: .76rem; line-height: 1.45; color: var(--text);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rv-meta {
+  margin-top: auto; font-family: 'DM Mono', monospace;
+  font-size: .62rem; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+@media (max-width: 560px) {
+  .rv-card { flex-basis: 78%; }
+}
+
 /* ── Grid ── */
 .game-grid {
   display: grid;
@@ -708,6 +758,15 @@ header {
     <span id="statCode" style="color:var(--code)">Code 0</span>
   </div>
 
+  <section class="reviews" id="reviews" aria-label="Buyer reviews">
+    <div class="rv-head">
+      <span class="rv-score" id="rvScore"></span>
+      <span id="rvCount"></span>
+      <a class="rv-all" id="rvAll" target="_blank" rel="noopener">All reviews on Carousell ↗</a>
+    </div>
+    <div class="rv-rail" id="rvRail"></div>
+  </section>
+
   <div class="game-grid" id="gameGrid">
     <div class="skel"></div><div class="skel"></div>
     <div class="skel"></div><div class="skel"></div>
@@ -785,6 +844,20 @@ var SHEETS = [
   { tab: 'Digital Codes - Switch',      type: 'code' },
   { tab: 'Digital Codes - Playstation', type: 'code', optional: true },
 ];
+
+// Buyer reviews live in their own tab. Carousell has no public feed and blocks
+// cross-origin reads, so the reviews shown here are ones copied into the sheet;
+// the "all reviews" link sends people to the live Carousell page for the rest.
+// Columns are matched by keyword like the game tabs: reviewer / rating /
+// review / date, plus an optional item column. No tab, no strip.
+var REVIEWS_TAB = 'Reviews';
+var REVIEW_COL_KEYS = {
+  name:   ['reviewer', 'buyer', 'user', 'name', 'from'],
+  rating: ['rating', 'stars', 'star', 'score'],
+  text:   ['review', 'comment', 'feedback', 'text'],
+  date:   ['date', 'when'],
+  item:   ['item', 'game', 'listing', 'product'],
+};
 
 // Column keyword detection (case-insensitive substring match, first hit wins)
 var COL_KEYS = {
@@ -1306,6 +1379,102 @@ function loadAll() {
   });
 }
 
+// ── Reviews ─────────────────────────────────────────────────────────────────
+// Its own small reader rather than loadSheet, whose column map and price
+// parsing are all about games. Any failure here is silent: the strip simply
+// stays hidden, and the catalogue — the point of the page — is unaffected.
+function loadReviews() {
+  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID
+          + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(REVIEWS_TAB);
+  return fetch(url)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      var m = text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/);
+      if (!m) throw new Error('Bad response from the Reviews tab');
+      var data = JSON.parse(m[1]);
+      if (data.status === 'error') throw new Error('No Reviews tab');
+      var rows    = data.table.rows || [];
+      var headers = (data.table.cols || []).map(function(c) { return (c.label || '').toLowerCase().trim(); });
+      if (headers.join('') === '' && rows.length) {
+        headers = (rows[0].c || []).map(function(c) {
+          return c && c.v != null ? String(c.v).toLowerCase().trim() : '';
+        });
+        rows = rows.slice(1);
+      }
+      // Claimed columns are struck off as we go: "Reviewer" contains "review",
+      // so without this the text key would latch onto the name column.
+      var idx = {}, taken = {};
+      Object.keys(REVIEW_COL_KEYS).forEach(function(k) {
+        idx[k] = headers.findIndex(function(h, i) {
+          return !taken[i] && REVIEW_COL_KEYS[k].some(function(kw) { return h.indexOf(kw) !== -1; });
+        });
+        if (idx[k] >= 0) taken[idx[k]] = true;
+      });
+      var get = function(row, i) {
+        if (i < 0 || !row.c || !row.c[i] || row.c[i].v == null) return '';
+        return String(row.c[i].f || row.c[i].v).trim();
+      };
+      return rows.map(function(row) {
+        var n = parseFloat(get(row, idx.rating).replace(/[^0-9.]/g, ''));
+        return {
+          name:   get(row, idx.name),
+          rating: isNaN(n) ? null : Math.max(0, Math.min(5, Math.round(n))),
+          text:   get(row, idx.text),
+          date:   get(row, idx.date),
+          item:   get(row, idx.item),
+        };
+      }).filter(function(r) { return r.text || r.rating; });
+    });
+}
+
+function renderReviews(list) {
+  if (!list || !list.length) return;
+  var rail = document.getElementById('rvRail');
+  list.forEach(function(r) {
+    var card = document.createElement('article');
+    card.className = 'rv-card';
+    if (r.rating) {
+      var st = document.createElement('div');
+      st.className = 'rv-stars';
+      st.textContent = '★★★★★'.slice(0, r.rating) + '☆☆☆☆☆'.slice(0, 5 - r.rating);
+      st.setAttribute('aria-label', r.rating + ' out of 5');
+      card.appendChild(st);
+    }
+    if (r.text) {
+      var t = document.createElement('p');
+      t.className = 'rv-text';
+      t.textContent = r.text;
+      card.appendChild(t);
+    }
+    // Name, date and item are all optional in the sheet, so the byline is built
+    // from whichever of them the row actually filled in.
+    var bits = [r.name, r.item, r.date].filter(Boolean);
+    if (bits.length) {
+      var meta = document.createElement('div');
+      meta.className = 'rv-meta';
+      meta.textContent = bits.join(' · ');
+      card.appendChild(meta);
+    }
+    rail.appendChild(card);
+  });
+
+  var rated = list.filter(function(r) { return r.rating; });
+  if (rated.length) {
+    var avg = rated.reduce(function(s, r) { return s + r.rating; }, 0) / rated.length;
+    document.getElementById('rvScore').textContent = '★ ' + avg.toFixed(1);
+  }
+  document.getElementById('rvCount').textContent =
+    list.length + ' review' + (list.length === 1 ? '' : 's');
+
+  var all = document.getElementById('rvAll');
+  if (CONTACT.reviews) all.href = CONTACT.reviews; else all.remove();
+  document.getElementById('reviews').classList.add('show');
+}
+
+loadReviews()
+  .then(renderReviews)
+  .catch(function(e) { console.warn('Reviews strip skipped: ' + e.message); });
+
 // ── Platform helpers ────────────────────────────────────────────────────────
 function platClass(g) {
   if (g.type === 'code') return 'code';
@@ -1678,6 +1847,7 @@ directLoad.then(function(games) {
 var CONTACT = {
   telegram:  'https://t.me/imbblohgames',
   carousell: 'https://www.carousell.sg/u/im.bbloh/',
+  reviews:   'https://www.carousell.sg/u/im.bbloh/?filter=0&sort=newest&tab=reviews',
 };
 
 (function contactLinks() {
