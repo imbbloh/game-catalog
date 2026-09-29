@@ -1,0 +1,52 @@
+name: Build Carousell Reviews
+
+on:
+  schedule:
+    - cron: '0 19 * * *'   # daily 03:00 GMT+8, after the listings run
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carousell-reviews
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Scrape reviews (best effort — keeps the committed file on failure)
+        run: |
+          npm init -y >/dev/null
+          npm install playwright playwright-extra puppeteer-extra-plugin-stealth --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          if node scripts/carousell-reviews.mjs; then
+            echo "Scrape succeeded"
+          else
+            echo "Scrape found nothing — keeping the committed reviews.json"
+            git checkout HEAD -- reviews.json 2>/dev/null || true
+          fi
+          rm -f package.json package-lock.json 2>/dev/null || true
+
+      - name: Commit reviews.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          [ -s reviews.json ] || { echo "no reviews.json — nothing to commit"; exit 0; }
+          mkdir -p /tmp/rv && cp reviews.json /tmp/rv/
+          for i in 1 2 3; do
+            git add reviews.json
+            if git diff --cached --quiet; then echo "reviews unchanged"; break; fi
+            git commit -m "Update Carousell reviews"
+            if git push; then break; fi
+            echo "push rejected — resetting and retrying ($i/3)"
+            git fetch origin main
+            git reset --hard origin/main
+            cp /tmp/rv/reviews.json .
+          done
